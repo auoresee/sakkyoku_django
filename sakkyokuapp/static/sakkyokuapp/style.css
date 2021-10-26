@@ -1,0 +1,48 @@
+header{
+  height: 45px;
+  position: absolute;
+  padding-top: 10px;
+  padding-left: 10px;
+  z-index: 0;
+  left: 0px;
+  top: 0px;
+  background-color: #404040;
+  color: #E0E0E0;
+  width: 100%;
+  text-align: left;
+  z-index: 2;
+  box-shadow: -2px 2px 4px gray;
+  font-family: sans-serif;
+  font-size: 21px;
+}
+
+body {
+  margin-top: 80px;
+
+  background-color: #F8F8F0;
+  color: #303030;
+}
+  
+
+h1 {
+  padding: 0.5em;/*文字周りの余白*/
+  color: #494949;/*文字色*/
+  background: #fffaf4;/*背景色*/
+  border-left: solid 5px #ffaf58;/*左線（実線 太さ 色）*/
+}
+
+h2 {
+  padding: 0.5em;/*文字周りの余白*/
+  color: #010101;/*文字色*/
+  background: #eaf3ff;/*背景色*/
+  border-bottom: solid 3px #516ab6;/*下線*/
+}
+
+h3 {
+  font-size: 105%;
+  background: linear-gradient(transparent 80%, #a7d6ff 80%);
+}
+
+h4 {
+  font-size: 105%;
+}

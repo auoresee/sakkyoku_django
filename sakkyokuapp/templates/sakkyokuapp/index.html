@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>   
+        {% load static %}
+
+        <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+        <script src="{% static 'sakkyokuapp/javascript/IndexMain.js' %}"></script>
+        <meta charset="utf-8">
+        <meta http-equiv="Cache-Control" content="no-cache">
+
+        <link type="text/css" rel="stylesheet" href="{% static 'sakkyokuapp/style.css' %}">
+        <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+        <title>作曲.jp</title>
+    </head>
+    <body>
+    
+    <h1>作曲.jp</h1>
+    
+    <h3><a href="sequencer.html">曲を作成</a></h3>
+    
+    <div id="song_list">
+    	<h2>最近アップロードされた曲</h2>
+        <div id="top_song_list">
+            <p>Loading...</p>
+        </div>
+
+		<h2>自分の曲</h2>
+        <div id="my_song_list">
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    </body>
+</html>
+   
