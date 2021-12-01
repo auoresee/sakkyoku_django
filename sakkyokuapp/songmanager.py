@@ -59,7 +59,6 @@ class SongManager:
         return True
 
     def getAvailableSongID(self):
-        print(glob.glob("*"))
         os.chdir("sakkyokuapp/songs")
         files = glob.glob("*.song")
         os.chdir("../../")
@@ -88,16 +87,15 @@ class SongManager:
         song = json.loads(song_json)
 
         self.s_user_id = s_user_id
-
-        print(s_user_id)
 	
-        if (song['userID'] == 0):
-            song['userID'] = s_user_id
-        if (song['userID'] != s_user_id):		#when one tried to overwrite another user's song
-            return "!error: This user is not the original author"
+        if (s_user_id != None):
+            if (song['userID'] == 0):
+                song['userID'] = s_user_id
+            if (song['userID'] != s_user_id):		#when one tried to overwrite another user's song
+                return "!error: This user is not the original author"
 
-        if(not self.checkSongValid(song)):
-            return "!error: Invalid song data"
+            if(not self.checkSongValid(song)):
+                return "!error: Invalid song data"
         
         self.setIDtoSong(song)
 
@@ -114,10 +112,9 @@ class SongManager:
         #Song.objects.update_or_create(**song)
 
         song['createdDate'] = str(make_aware(datetime.fromtimestamp(song['createdDate'] // 1000)))
-        song['releasedDate'] = str(make_aware(datetime.fromtimestamp(song['releasedDate'] // 1000)))
+        if('releasedDate' in song):
+            song['releasedDate'] = str(make_aware(datetime.fromtimestamp(song['releasedDate'] // 1000)))
         song['lastUpdatedDate'] = str(make_aware(datetime.fromtimestamp(song['lastUpdatedDate'] // 1000)))
-        
-        print(song)
 
         songentry = Song(**song)
         

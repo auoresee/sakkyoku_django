@@ -34,8 +34,8 @@ def api_get_song_list(request):
     if(target == SongManager.SONGLIST_TARGET_ALL):
         targetUserID = -1
     elif(target == SongManager.SONGLIST_TARGET_MY):
-        #targetUserID = req.session.userID ? req.session.userID : 0
-        targetUserID = 0
+        targetUserID = request.session.get('userID', 0)
+        if(targetUserID == None): targetUserID = 0
     elif(target == SongManager.SONGLIST_TARGET_SPECIFIED_USER):
         targetUserID = request.query.userID
 

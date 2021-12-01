@@ -17,8 +17,11 @@ from django.contrib import admin
 from django.urls import path
 
 from . import views
+from .admintools import reconstruct_db as rec
 
 urlpatterns = [
+    path('admin/db/', rec.db_admin_page),
+    path('admin/db/reconstruct', rec.reconstruct_db),
     path('admin/', admin.site.urls),
     path('', views.top_page),
     path('index.html', views.top_page),

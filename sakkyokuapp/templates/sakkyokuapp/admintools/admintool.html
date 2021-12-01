@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+	<meta charset="utf-8">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+</head>
+
+<body>
+
+<h2>データベースを再構築する</h2>
+<form action="/admin/db/reconstruct" method="POST">
+	{% csrf_token %}
+	SQL password: <input name="password">
+	<input type="submit" value="再構築">
+
+</form>
+
+</body>
+
+</html>
