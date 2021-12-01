@@ -1,5 +1,5 @@
 const DEFAULT_TRACK_NUM = 8;
-const UPLOAD_URL = "php/songsaver.php";
+const UPLOAD_URL = "/api/songs/save";
 
 class Sequencer {
 
@@ -144,6 +144,8 @@ class Sequencer {
             return;
         }
 
+        var csrf_token = getCookie("csrftoken");
+
         this.save();
 
         let jsondata = this.song.getJSON();
@@ -153,6 +155,9 @@ class Sequencer {
                 url: UPLOAD_URL,
                 type:'POST',
                 data: "json="+jsondata,
+                beforeSend: function(xhr, settings) {
+                    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+                },
                 error:function(){},
                 complete:this.processUploadResponse.bind(this),
                 dataType:'json'
@@ -233,4 +238,21 @@ class Sequencer {
     changeCurrentTrackInstrument(instrumentID) {
         this.changeTrackInstrument(this.index, instrumentID);
     }
+}
+
+// csrf_tokenの取得に使う
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }

@@ -36,7 +36,7 @@ class SoundManager {
 
     loadSound(name, url) {
         var request = new XMLHttpRequest();
-        request.open('GET', url, true);
+        request.open('GET', "/static/sakkyokuapp/"+url, true);
         request.responseType = 'arraybuffer';
 
         // Decode asynchronously

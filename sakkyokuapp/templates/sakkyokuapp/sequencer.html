@@ -9,37 +9,41 @@
 
         <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 
-        <script src="javascript/web-audio-scheduler.js"></script>
-        <script src="javascript/SoundManager.js"></script>
-        <script src="javascript/QueryProcessor.js"></script> 
-        <script src="javascript/instruments.js?v=210410b"></script>
-        <script src="javascript/Track.js"></script>
-        <script src="javascript/Song.js"></script>
-        <script src="javascript/Sequencer.js"></script>
-        <script src="javascript/ui.js"></script>
-        <script src="javascript/Controls.js?v=210410b"></script>
-        <script src="javascript/SongLoader.js"></script> 
-        <script src="javascript/SequencerInit.js"></script> 
+        {% load static %}
+
+        {% csrf_token %}
+
+        <script src="{% static 'sakkyokuapp/javascript/web-audio-scheduler.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/SoundManager.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/QueryProcessor.js' %}"></script> 
+        <script src="{% static 'sakkyokuapp/javascript/instruments.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/Track.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/Song.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/Sequencer.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/ui.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/Controls.js' %}"></script>
+        <script src="{% static 'sakkyokuapp/javascript/SongLoader.js' %}"></script> 
+        <script src="{% static 'sakkyokuapp/javascript/SequencerInit.js' %}"></script> 
         
         <title>PianoRoll.js</title>
-        <link type="text/css" rel="stylesheet" href="style/main.css">
+        <link type="text/css" rel="stylesheet" href="{% static 'sakkyokuapp/style/main.css' %}">
     </head>
     <body>
     
     <div id="menu">
         <div id="options">
             <div id="note-lengths">   
-                <div id="whole"><img src="images/whole-note.jpg" alt="whole note" height="30" width="25"/></div>
-                <div id="half"><img src="images/half-note.jpg" alt="half note" height="30" width="25"/></div>
-                <div id="quarter"><img src="images/quarter-note.jpg" alt="quarter note" height="30" width="25"/></div>
-                <div id="eight"><img src="images/eigth-note.jpg" alt="eighth note" height="30" width="25"/></div>
-                <div id="sixteenth"><img src="images/sixteenth-note.jpg" alt="sixteenth note" height="30" width="25"/></div>
+                <div id="whole"><img src="{% static 'sakkyokuapp/images/whole-note.jpg' %}" alt="whole note" height="30" width="25"/></div>
+                <div id="half"><img src="{% static 'sakkyokuapp/images/half-note.jpg' %}" alt="half note" height="30" width="25"/></div>
+                <div id="quarter"><img src="{% static 'sakkyokuapp/images/quarter-note.jpg' %}" alt="quarter note" height="30" width="25"/></div>
+                <div id="eight"><img src="{% static 'sakkyokuapp/images/eigth-note.jpg' %}" alt="eighth note" height="30" width="25"/></div>
+                <div id="sixteenth"><img src="{% static 'sakkyokuapp/images/sixteenth-note.jpg' %}" alt="sixteenth note" height="30" width="25"/></div>
             </div>
             付点:<input type="checkbox" id="note-point-checkbox">
     
             <div id="song-controls">
                 <span>Tempo: </span><input id = "tempo" type="number" min="30" max="400" step="1" value="100">
-                <button id="play-button"><img src="images/play.png" alt="play" height="32" width="32"/></button>
+                <button id="play-button"><img src="{% static 'sakkyokuapp/images/play.png' %}" alt="play" height="32" width="32"/></button>
             </div>
             <div id="tracks-container">
                 トラック:

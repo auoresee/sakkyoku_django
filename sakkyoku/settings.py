@@ -122,6 +122,10 @@ USE_I18N = True
 
 USE_L10N = True
 
+# 東京のタイムゾーンに設定
+TIME_ZONE = 'Asia/Tokyo'
+
+# タイムゾーンを使用するかどうか
 USE_TZ = True
 
 

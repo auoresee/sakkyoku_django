@@ -1,4 +1,5 @@
-const SONGLIST_REQUEST_URL = "php/songlistmanager.php";
+//const SONGLIST_REQUEST_URL = "php/songlistmanager.php";
+const SONGLIST_REQUEST_URL = "api/songs/";
 
 const SONGLIST_RELEASE_ANY = 1;		//no matter whether released
 const SONGLIST_RELEASE_TRUE = 2;		//released songs only
@@ -82,7 +83,7 @@ class IndexMain {
         }
 
         let obj = JSON.parse(res);
-        let song_list = obj.songList;
+        let song_list = obj.songs;
 
         this.setSongListToHTML(song_list, mode);
     }

@@ -1,12 +1,13 @@
-const DOWNLOAD_URL = "php/songloader.php";
+const DOWNLOAD_URL = "api/songs/";
 
 class SongLoader {
     requestSong(song_id){
         $.ajax(
             {
-                url: DOWNLOAD_URL,
+                url: DOWNLOAD_URL + song_id,
                 type:'GET',
-                data: "song_id="+song_id,
+                //data: "song_id="+song_id,
+                data: "",
                 cache: false,
                 error:function(){},
                 complete:this.processResponse.bind(this),
