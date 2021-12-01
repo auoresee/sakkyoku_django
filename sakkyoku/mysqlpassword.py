@@ -1,1 +1,0 @@
-SQL_PASSWORD = "v7N2k8pG2"
