@@ -323,6 +323,7 @@ class Grid {
                 }
                 this.pastKey = key;
             }
+            this.processMouseOver(x, y);
         }).bind(this);
 
         this.grid.onmousedown = (function (e) {
@@ -349,6 +350,31 @@ class Grid {
         this.noteContext.fillStyle = '#F00';
         this.noteContext.fillRect(x, y, height, width);
         this.noteContext.strokeRect(x, y, height, width);
+    }
+    findExistNote(x, y) {
+        var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
+        var notePixelLength = this.currentNoteDuration / this.cellBeatLength * this.cellWidth;
+        var cellLocationOffset = Math.floor(x % this.cellWidth / (this.smallestBeatIncrement * this.cellWidth / this.cellBeatLength)) * this.smallestPixelBeatIncrement;
+        var xPosition = cellLocation + cellLocationOffset;
+        var visualKeyIndex = Math.floor((y - this.startY) / this.keyHeight);
+        var keyIndex = - Math.floor((y - this.startY) / this.keyHeight) + noteNumberOffset;
+        if (keyIndex < 0) {
+            return;
+        }
+        var yPosition = this.startY + visualKeyIndex * this.keyHeight;
+
+        var noteToDraw = new DrawnNote(xPosition, yPosition, notePixelLength, true);
+        var currentIndex = xPosition / this.smallestPixelBeatIncrement;
+        var noteToDelete = this.checkSameNote(noteToDraw, this.noteXLookup[currentIndex]);
+        return noteToDelete;
+    }
+    processMouseOver(x, y) {
+        const noteUnderCursor = this.findExistNote(x, y);
+        if (noteUnderCursor) {
+            document.body.style.cursor = 'pointer';
+        } else {
+            document.body.style.cursor = '';
+        }
     }
     processClick(x, y, draw) {
         var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
