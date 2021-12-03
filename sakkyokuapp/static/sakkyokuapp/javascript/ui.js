@@ -370,9 +370,11 @@ class Grid {
     }
     processMouseOver(x, y) {
         const noteUnderCursor = this.findExistNote(x, y);
-        if (noteUnderCursor) {
+        if (noteUnderCursor && this.last_cursor !== 'pointer') {
+            this.last_cursor = 'pointer';
             document.body.style.cursor = 'pointer';
-        } else {
+        } else if (!noteUnderCursor && this.last_cursor !== '') {
+            this.last_cursor = '';
             document.body.style.cursor = '';
         }
     }
