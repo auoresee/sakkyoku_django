@@ -366,13 +366,50 @@ class Grid {
         var noteToDraw = new DrawnNote(xPosition, yPosition, notePixelLength, true);
         var currentIndex = xPosition / this.smallestPixelBeatIncrement;
         var noteToDelete = this.checkSameNote(noteToDraw, this.noteXLookup[currentIndex]);
-        return noteToDelete;
+
+        let clickedPosition = null;
+        if (noteToDelete) {
+            const edgeRange = 1;
+            if (this.edgeCheck(noteToDelete, currentIndex, 1, edgeRange)) {
+                clickedPosition = 'right';
+            } else if (this.edgeCheck(noteToDelete, currentIndex, -1, edgeRange)) {
+                clickedPosition = 'left';
+            } else {
+                clickedPosition = 'center';
+            }
+        }
+
+        return [noteToDelete, clickedPosition];
+    }
+    edgeCheck(noteToCompare, startIndex, indexStep, indexIter) {
+        let index = startIndex;
+        for (let i=0; i<indexIter; i++) {
+            index += indexStep;
+            if (index<0 || this.noteXLookup.length<=index) break;
+            const currentNote = this.checkSameNote(noteToCompare, this.noteXLookup[index]);
+            if (!noteToCompare.equals(currentNote)) return true;
+        }
+        return false;
     }
     processMouseOver(x, y) {
-        const noteUnderCursor = this.findExistNote(x, y);
-        if (noteUnderCursor && this.last_cursor !== 'pointer') {
-            this.last_cursor = 'pointer';
-            document.body.style.cursor = 'pointer';
+        const [noteUnderCursor, clickedPosition] = this.findExistNote(x, y);
+        if (noteUnderCursor) {
+            switch (clickedPosition) {
+            case 'center':
+                if (this.last_cursor !== 'pointer') {
+                    this.last_cursor = 'pointer';
+                    document.body.style.cursor = 'pointer';
+                }
+                break;
+            case 'right':
+            case 'left':
+                if (this.last_cursor !== 'ew-resize') {
+                    this.last_cursor = 'ew-resize';
+                    document.body.style.cursor = 'ew-resize';
+                }
+                break;
+            }
+            
         } else if (!noteUnderCursor && this.last_cursor !== '') {
             this.last_cursor = '';
             document.body.style.cursor = '';
@@ -474,6 +511,13 @@ class DrawnNote {
         this.length = length;
         this.isStart = isStart;
         this.startIndex = startIndex;
+    }
+
+    equals(o) {
+        if (o instanceof DrawnNote) {
+            return this.x === o.x && this.y === o.y && this.length === o.length && this.isStart === o.isStart && this.startIndex === o.startIndex;
+        }
+        return false;
     }
 }
 
