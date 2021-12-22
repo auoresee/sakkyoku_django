@@ -229,6 +229,7 @@ class Grid {
         this.measureCounter = document.getElementById("measure-counter-canvas");
         this.measureCounterContext = this.measureCounter.getContext("2d");
         this.noteXLookup = [];
+        this.grabbingNote = null; // null || {note, clickedPosition}
     }
     drawGrid(cellWidth, cellBeatLength, piano, notes) {
         this.piano = piano;
@@ -323,17 +324,30 @@ class Grid {
                 }
                 this.pastKey = key;
             }
+            this.processMouseOver(x, y);
         }).bind(this);
 
         this.grid.onmousedown = (function (e) {
             var x = e.pageX - this.grid.offsetLeft + this.container.scrollLeft;
-            var y = e.pageY - this.grid.offsetTop + this.container.scrollTop;;
-            this.processClick(x, y);
+            var y = e.pageY - this.grid.offsetTop + this.container.scrollTop;
+            this.processClick(x, y, true, e.button);
+        }).bind(this);
+
+        this.grid.onmouseup = (function (e) {
+            var x = e.pageX - this.grid.offsetLeft + this.container.scrollLeft;
+            var y = e.pageY - this.grid.offsetTop + this.container.scrollTop;
+            this.processMouseUp(x, y);
         }).bind(this);
 
         this.grid.onmouseout = (function () {
             this.piano.drawNote(this.pastKey, false);
         }).bind(this);
+
+        // disable right click menu
+        this.grid.oncontextmenu = (function (e) {
+            e.preventDefault();
+            return false;
+        })
     }
     getKeyIndex(x, y) {
         var keyIndex = Math.floor((y - this.startY) / this.keyHeight);
@@ -350,7 +364,139 @@ class Grid {
         this.noteContext.fillRect(x, y, height, width);
         this.noteContext.strokeRect(x, y, height, width);
     }
-    processClick(x, y, draw) {
+    findExistNote(x, y) {
+        var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
+        var notePixelLength = this.currentNoteDuration / this.cellBeatLength * this.cellWidth;
+        var cellLocationOffset = Math.floor(x % this.cellWidth / (this.smallestBeatIncrement * this.cellWidth / this.cellBeatLength)) * this.smallestPixelBeatIncrement;
+        var xPosition = cellLocation + cellLocationOffset;
+        var visualKeyIndex = Math.floor((y - this.startY) / this.keyHeight);
+        var keyIndex = - Math.floor((y - this.startY) / this.keyHeight) + noteNumberOffset;
+        if (keyIndex < 0) {
+            return;
+        }
+        var yPosition = this.startY + visualKeyIndex * this.keyHeight;
+
+        var noteToDraw = new DrawnNote(xPosition, yPosition, notePixelLength, true);
+        var currentIndex = xPosition / this.smallestPixelBeatIncrement;
+        var noteToDelete = this.checkSameNote(noteToDraw, this.noteXLookup[currentIndex]);
+
+        let clickedPosition = null;
+        if (noteToDelete) {
+            const edgeRange = 1;
+            if (this.edgeCheck(noteToDelete, currentIndex, 1, edgeRange)) {
+                clickedPosition = 'right';
+            } else if (this.edgeCheck(noteToDelete, currentIndex, -1, edgeRange)) {
+                clickedPosition = 'left';
+            } else {
+                clickedPosition = 'center';
+            }
+        }
+
+        return [noteToDelete, clickedPosition];
+    }
+    edgeCheck(noteToCompare, startIndex, indexStep, indexIter) {
+        let index = startIndex;
+        for (let i=0; i<indexIter; i++) {
+            index += indexStep;
+            if (index<0 || this.noteXLookup.length<=index) break;
+            const currentNote = this.checkSameNote(noteToCompare, this.noteXLookup[index]);
+            if (!noteToCompare.equals(currentNote)) return true;
+        }
+        return false;
+    }
+    processMouseUp(x, y) {
+        this.grabbingNote = null;
+    }
+    processMouseOver(x, y) {
+        if (this.grabbingNote === null) {
+            this.processFreeMouseOver(x, y);
+        } else {
+            this.processGrabbingNoteMove(x, y);
+        }
+    }
+    processGrabbingNoteMove(x, y) {
+        // quantized x
+        const qx = Math.floor(x/this.currentSmallestPixelBeatIncrement) * this.currentSmallestPixelBeatIncrement;
+        // delete the note from noteXLookup and track,
+        // then add the note with modified start and length
+        switch (this.grabbingNote.clickedPosition) {
+        case 'center':
+            console.log("unreachable");
+            break;
+        case 'right':
+            this.deleteNoteIndices(this.grabbingNote.note);
+            this.deleteNoteFromTrack(this.grabbingNote.note);
+            this.grabbingNote.note.length = qx - this.grabbingNote.note.x;
+            this.addNoteIndices(this.grabbingNote.note);
+            this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity)
+            this.drawNotes();
+            break;
+        case 'left':
+            this.deleteNoteIndices(this.grabbingNote.note);
+            this.deleteNoteFromTrack(this.grabbingNote.note);
+            const oldX = this.grabbingNote.note.x;
+            this.grabbingNote.note.x = qx;
+            this.grabbingNote.note.length += oldX - qx;
+            this.addNoteIndices(this.grabbingNote.note);
+            this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity);
+            this.drawNotes();
+            break;
+        default:
+            console.log("unreachable");
+            break;
+        }
+    }
+    calculateNoteIndexRange(note) {
+        return [note.x/this.smallestPixelBeatIncrement, (note.x+note.length)/this.smallestPixelBeatIncrement];
+    }
+    deleteNoteIndices(note) {
+        const [start, end] = this.calculateNoteIndexRange(note);
+        for (let i=start; i<end; i++) {
+            this.noteXLookup[i] = this.noteXLookup[i].filter(n => !n.equals(note));
+        }
+    }
+    deleteNoteFromTrack(note) {
+        // the duration parameter seems to be unused
+        const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
+        this.piano.track.removeNote(keyIndex, note.x * this.cellBeatLength / this.cellWidth, undefined, undefined);
+    }
+    addNoteIndices(note) {
+        const [start, end] = this.calculateNoteIndexRange(note);
+        for (let i=start; i<end; i++) {
+            this.noteXLookup[i].push(note);
+        }
+    }
+    addNoteToTrack(note, velocity) {
+        const beatNumber = note.x * this.cellBeatLength / this.cellWidth;
+        const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
+        const noteLength = note.length * this.smallestBeatIncrement / this.smallestPixelBeatIncrement;
+        this.piano.track.addNote(new Note(keyIndex, beatNumber, noteLength, velocity));
+    }
+    processFreeMouseOver(x, y) {
+        const [noteUnderCursor, clickedPosition] = this.findExistNote(x, y);
+        if (noteUnderCursor) {
+            switch (clickedPosition) {
+            case 'center':
+                if (this.last_cursor !== 'pointer') {
+                    this.last_cursor = 'pointer';
+                    document.body.style.cursor = 'pointer';
+                }
+                break;
+            case 'right':
+            case 'left':
+                if (this.last_cursor !== 'ew-resize') {
+                    this.last_cursor = 'ew-resize';
+                    document.body.style.cursor = 'ew-resize';
+                }
+                break;
+            }
+            
+        } else if (!noteUnderCursor && this.last_cursor !== '') {
+            this.last_cursor = '';
+            document.body.style.cursor = '';
+        }
+    }
+    processClick(x, y, draw, button) {
         var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
         var notePixelLength = this.currentNoteDuration / this.cellBeatLength * this.cellWidth;
         var cellLocationOffset = Math.floor(x % this.cellWidth / (this.smallestBeatIncrement * this.cellWidth / this.cellBeatLength)) * this.smallestPixelBeatIncrement;
@@ -367,18 +513,26 @@ class Grid {
         var noteToDraw = new DrawnNote(xPosition, yPosition, notePixelLength, true);
         var currentIndex = xPosition / this.smallestPixelBeatIncrement;
         var durationInIncrements = this.currentNoteDuration / this.smallestBeatIncrement;
-        var noteToDelete = this.checkSameNote(noteToDraw, this.noteXLookup[currentIndex]);
+        var [noteToDelete, clickedPosition] = this.findExistNote(x, y);
 
         if (noteToDelete) {
-            var startIndex = noteToDelete.x / this.smallestPixelBeatIncrement;
-            var stopIndex = noteToDelete.length / this.smallestPixelBeatIncrement + startIndex;
-            for (var i = startIndex; i < stopIndex; i++) {
-                this.removeNote(noteToDelete.x, yPosition, this.noteXLookup[i]);
+            if (button === 0) {
+                var startIndex = noteToDelete.x / this.smallestPixelBeatIncrement;
+                var stopIndex = noteToDelete.length / this.smallestPixelBeatIncrement + startIndex;
+                for (var i = startIndex; i < stopIndex; i++) {
+                    this.removeNote(noteToDelete.x, yPosition, this.noteXLookup[i]);
+                }
+                this.drawNotes();
+                this.piano.track.removeNote(keyIndex, noteToDelete.x * this.cellBeatLength / this.cellWidth, this.currentNoteDuration, 1);
+            } else if (button === 2 && clickedPosition !== 'center') {
+                this.grabbingNote = {
+                    note: noteToDelete,
+                    clickedPosition: clickedPosition
+                };
             }
-            this.drawNotes();
-            this.piano.track.removeNote(keyIndex, noteToDelete.x * this.cellBeatLength / this.cellWidth, this.currentNoteDuration, 1);
         }
         else {
+            if (button !== 0) return;
             this.addNotes(currentIndex, durationInIncrements, noteToDraw);
             if (draw == undefined || draw == true) {
                 this.drawNote(xPosition, yPosition, notePixelLength, this.keyHeight);
@@ -446,6 +600,13 @@ class DrawnNote {
         this.length = length;
         this.isStart = isStart;
         this.startIndex = startIndex;
+    }
+
+    equals(o) {
+        if (o instanceof DrawnNote) {
+            return this.x === o.x && this.y === o.y && this.length === o.length && this.isStart === o.isStart && this.startIndex === o.startIndex;
+        }
+        return false;
     }
 }
 
