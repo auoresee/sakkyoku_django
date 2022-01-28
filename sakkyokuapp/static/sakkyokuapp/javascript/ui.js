@@ -284,7 +284,7 @@ class Grid {
         for (var i = 0; i < numCells; i++) {
             if (i % cellsInMeasure == 0) {
                 this.context.strokeStyle = '#000';
-                this.measureCounterContext.fillText((i / 4) + 1, i * this.cellWidth + this.cellWidth / 4, 12);
+                this.measureCounterContext.fillText((i / 4) + 1, Piano.whiteWidth + i * this.cellWidth + this.cellWidth / 4, 12);
             }
             else {
                 this.context.strokeStyle = '#6E6E6E';
