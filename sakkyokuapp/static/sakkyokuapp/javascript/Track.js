@@ -85,6 +85,11 @@ class Track {
         }.bind(this);
         this.sched.start(callback);
         */
+
+        const scheduledNotes = [];
+        for (let i=0; i<this.notes.length; i++) {
+            scheduledNotes.push(false);
+        }
         const callback = function (proxy) {
             const beatTime = 60.0 / this.song.tempo;
             const requestedDuration = proxy.requestDuration;
@@ -95,15 +100,17 @@ class Track {
                     continue;
                 } else if (absoluteTime > playbackTime + requestedDuration) {
                     break;
+                } else if (scheduledNotes[i]) {
+                    continue;
                 }
 
-                console.log(this.notes[i]);
                 const absoluteDuration = beatTime * this.notes[i].duration * 1000;
                 const ch = 0x01;
                 const noteOn = [0x90 | ch, this.notes[i].noteNumber, this.notes[i].volume];
                 const noteOff = [0x80 | ch, this.notes[i].noteNumber, 0];
                 proxy.scheduleWithDelay(noteOn, absoluteTime - playbackTime);
                 proxy.scheduleWithDelay(noteOff, absoluteTime + absoluteDuration - playbackTime);
+                scheduledNotes[i] = true;
             }
         }.bind(this);
         this.mSched.start(callback);

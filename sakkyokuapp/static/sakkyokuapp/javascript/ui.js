@@ -538,7 +538,7 @@ class Grid {
             this.addNotes(currentIndex, durationInIncrements, noteToDraw);
             if (draw == undefined || draw == true) {
                 this.drawNote(xPosition, yPosition, notePixelLength, this.keyHeight);
-                this.piano.track.playNote(keyIndex, 0, this.currentNoteDuration, 1);
+                this.piano.track.playNote(keyIndex, 0, this.currentNoteDuration, 1, keyIndex);
             }
             this.piano.track.addNote(new Note(keyIndex, beatNumber, this.currentNoteDuration, this.currentNoteVelocity));
         }

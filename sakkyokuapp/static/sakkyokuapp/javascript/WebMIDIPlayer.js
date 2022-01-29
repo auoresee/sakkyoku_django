@@ -42,12 +42,12 @@ class WebMIDIPlayer {
     }
 
     outputImmediately(data) {
-        console.log("scheduled immediately: " + data);
+        // console.log("scheduled immediately: " + data);
         this._currentOutput().send(data);
     }
 
     outputWithTimestamp(data, timestamp) {
-        console.log("scheduled with timestamp: " + data);
+        // console.log("scheduled with timestamp: " + data);
         this._currentOutput().send(data, timestamp);
     }
 
