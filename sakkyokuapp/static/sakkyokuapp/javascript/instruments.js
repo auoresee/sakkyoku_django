@@ -51,7 +51,20 @@ var instrumentArray = [
                 soundManager.playSoundPitch("BassDrum", false, pitch, duration, track.gainNode);
             }
         },
-        programChange: null // TODO: GM Drumset
+        programChange: null, // TODO: GM Drumset
+        mapNote: (freq, midiNoteNumber) => {
+            if(frequency >= 1000){
+                return 49;
+            }else if(frequency >= 700){
+                return 46;
+            }else if(frequency >= 450){
+                return 42;
+            }else if(frequency >= 250){
+                return 38;
+            }else{
+                return 35;
+            }
+        }
     },
 
     {
