@@ -72,11 +72,16 @@ class WebMIDIScheduler {
         this.callback = null;
         this.isRunning = false;
         this._currentLoop = null;
+
+        this.playbackTimeMillis = 0;
+        this._playbackStartedTs = null;
     }
 
     start(callback) {
         this.callback = callback;
         this.isRunning = true;
+        this.playbackTimeMillis = 0;
+        this._playbackStartedTs = performance.now();
         this._currentLoop = setInterval(this._tick.bind(this), this.interval);
     }
 
@@ -104,6 +109,8 @@ class WebMIDIScheduler {
         for (const entry of entries) {
             this.player.outputWithTimestamp(entry.data, timestamp+entry.delayMillis);
         }
+
+        this.playbackTimeMillis = timestamp - this._playbackStartedTs;
     }
 }
 
@@ -112,6 +119,8 @@ class WebMIDISchedulerProxy {
     constructor(scheduler) {
         this._scheduler = scheduler;
         this._entries = [];
+        this.requestDuration = this._scheduler.interval;
+        this.playbackTime = this._scheduler.playbackTimeMillis;
     }
 
     scheduleWithDelay(data, delayMillis) {

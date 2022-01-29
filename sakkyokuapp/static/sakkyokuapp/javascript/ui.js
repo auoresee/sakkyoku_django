@@ -74,7 +74,6 @@ class Piano {
         for (var i = 0, j = startindex; i < numKeys; i++, j = (j + 1) % 12) {
             var frequency = Math.pow(2, (Math.abs(startNote - i) - 49) / 12) * 440;
             const midiNoteNumber = calculateMidiNumber(octave, notes[j]);
-            console.log(midiNoteNumber);
             if (notes[j][1] == '#') {
                 this.keys[i] = new PianoKey(nextY, this.sharpHeight, notes[j], octave, frequency, midiNoteNumber);
             }

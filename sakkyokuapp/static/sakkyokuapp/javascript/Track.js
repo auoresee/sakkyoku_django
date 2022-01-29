@@ -75,6 +75,7 @@ class Track {
         /*for (var i = startNote; i < this.notes.length; i++) {
             this.audiolet.scheduler.addRelative(this.notes[i].beat - beat, this.playNote.bind(this, this.notes[i].frequency, this.notes[i].beat, this.notes[i].duration, this.notes[i].volume));
         }*/
+        /*
         let callback = function (e) {
             let beatTime = 60.0 / this.song.tempo;
             const delay = 0.1;
@@ -83,6 +84,29 @@ class Track {
             }
         }.bind(this);
         this.sched.start(callback);
+        */
+        const callback = function (proxy) {
+            const beatTime = 60.0 / this.song.tempo;
+            const requestedDuration = proxy.requestDuration;
+            const playbackTime = proxy.playbackTime;
+            for (let i=startNote; i<this.notes.length; i++) {
+                const absoluteTime = beatTime * (this.notes[i].beat - beat) * 1000;
+                if (absoluteTime < playbackTime) {
+                    continue;
+                } else if (absoluteTime > playbackTime + requestedDuration) {
+                    break;
+                }
+
+                console.log(this.notes[i]);
+                const absoluteDuration = beatTime * this.notes[i].duration * 1000;
+                const ch = 0x01;
+                const noteOn = [0x90 | ch, this.notes[i].noteNumber, this.notes[i].volume];
+                const noteOff = [0x80 | ch, this.notes[i].noteNumber, 0];
+                proxy.scheduleWithDelay(noteOn, absoluteTime - playbackTime);
+                proxy.scheduleWithDelay(noteOff, absoluteTime + absoluteDuration - playbackTime);
+            }
+        }.bind(this);
+        this.mSched.start(callback);
     }
     /**
      * Play a note
@@ -101,7 +125,7 @@ class Track {
 
     playMidiNote(noteNumber, duration, volume) {
         const ch = 0x01;
-        const velocity = 100;
+        const velocity = Math.floor(100*volume);
         const noteOn = [0x90 | ch, noteNumber, velocity];
         const noteOff = [0x80 | ch, noteNumber, 0];
         this.mSched.scheduleNow(noteOn);
