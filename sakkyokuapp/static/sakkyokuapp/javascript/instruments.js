@@ -53,6 +53,7 @@ var instrumentArray = [
         },
         programChange: null, // TODO: GM Drumset
         mapNote: (freq, midiNoteNumber) => {
+            const frequency = calculateFrequency(midiNoteNumber);
             if(frequency >= 1000){
                 return 49;
             }else if(frequency >= 700){
@@ -64,7 +65,8 @@ var instrumentArray = [
             }else{
                 return 35;
             }
-        }
+        },
+        isDrum: true
     },
 
     {

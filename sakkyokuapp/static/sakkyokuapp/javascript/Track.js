@@ -120,8 +120,9 @@ class Track {
                 // MIDI チャンネル
                 const ch = this.trackNumber;
                 // MIDI イベント
-                const noteOn = [0x90 | ch, this.notes[i].noteNumber, this.notes[i].volume];
-                const noteOff = [0x80 | ch, this.notes[i].noteNumber, 0];
+                const nn = this.mapMidiNoteNumber(null, this.notes[i].noteNumber);
+                const noteOn = [0x90 | ch, nn, this.notes[i].volume];
+                const noteOff = [0x80 | ch, nn, 0];
                 // スケジューリング
                 proxy.scheduleWithDelay(noteOn, absoluteTime - playbackTime);
                 proxy.scheduleWithDelay(noteOff, absoluteTime + absoluteDuration - playbackTime);
@@ -160,8 +161,8 @@ class Track {
 
     mapMidiNoteNumber(freq, noteNumber) {
         const inst = this.instrument;
-        if (this.instrument.mapNote) {
-            return this.instrument.mapNote(freq, noteNumber);
+        if (inst.mapNote) {
+            return inst.mapNote(freq, noteNumber);
         }
         return noteNumber;
     }
@@ -224,9 +225,14 @@ class Track {
 
     midiProgramChangeIfNeeded() {
         if (this.programChanged) return;
-        const pc = this.instrument.programChange;
-        const data = [0xc0 | this.trackNumber, pc];
-        this.mSched.scheduleNow(data);
+        if (this.instrument.isDrum) {
+            // TODO
+            this.trackNumber = 9;
+        } else {
+            const pc = this.instrument.programChange;
+            const data = [0xc0 | this.trackNumber, pc];
+            this.mSched.scheduleNow(data);
+        }
     }
 }
 
