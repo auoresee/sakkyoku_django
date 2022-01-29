@@ -107,7 +107,7 @@ class WebMIDIScheduler {
         const entries = proxy._entries;
 
         for (const entry of entries) {
-            this.player.outputWithTimestamp(entry.data, timestamp+entry.delayMillis);
+            this.player.outputWithTimestamp(entry.data, 100+timestamp+entry.delayMillis);
         }
 
         this.playbackTimeMillis = timestamp - this._playbackStartedTs;
@@ -119,7 +119,7 @@ class WebMIDISchedulerProxy {
     constructor(scheduler) {
         this._scheduler = scheduler;
         this._entries = [];
-        this.requestDuration = this._scheduler.interval;
+        this.requestDuration = this._scheduler.interval*1.5;
         this.playbackTime = this._scheduler.playbackTimeMillis;
     }
 
