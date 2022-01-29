@@ -6,7 +6,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("piano_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 0
     },
                 
     {
@@ -16,7 +17,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("RockOrgan_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 18
     },
     
     //played 2 octave lower than note position
@@ -27,7 +29,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 220.0;
             soundManager.playSoundPitch("FingerBass_A2", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 33
     },
 
     {
@@ -47,7 +50,23 @@ var instrumentArray = [
             }else{
                 soundManager.playSoundPitch("BassDrum", false, pitch, duration, track.gainNode);
             }
-        }            
+        },
+        programChange: null, // TODO: GM Drumset
+        mapNote: (freq, midiNoteNumber) => {
+            const frequency = calculateFrequency(midiNoteNumber);
+            if(frequency >= 1000){
+                return 49;
+            }else if(frequency >= 700){
+                return 46;
+            }else if(frequency >= 450){
+                return 42;
+            }else if(frequency >= 250){
+                return 38;
+            }else{
+                return 35;
+            }
+        },
+        isDrum: true
     },
 
     {
@@ -57,7 +76,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("Strings_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 48
     },
 
     {
@@ -67,7 +87,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("SopranoSax_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 64
     },
 
     {
@@ -77,7 +98,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("ODGuitar_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 29
     },
 
     {
@@ -87,7 +109,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("EPiano2_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 5
     },
 
     {
@@ -97,7 +120,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("SquareLead_A4", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 80
     },
 
     {
@@ -107,7 +131,8 @@ var instrumentArray = [
             let frequency = calculateFrequency(noteNumber);
             let pitch = frequency / 440.0;
             soundManager.playSoundPitch("SynthBell_A6", false, pitch, duration, track.gainNode);
-        }
+        },
+        programChange: 84
     },
 ];
 

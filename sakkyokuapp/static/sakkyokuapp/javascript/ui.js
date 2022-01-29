@@ -73,16 +73,17 @@ class Piano {
         var nextY = 0;
         for (var i = 0, j = startindex; i < numKeys; i++, j = (j + 1) % 12) {
             var frequency = Math.pow(2, (Math.abs(startNote - i) - 49) / 12) * 440;
+            const midiNoteNumber = calculateMidiNumber(octave, notes[j]);
             if (notes[j][1] == '#') {
-                this.keys[i] = new PianoKey(nextY, this.sharpHeight, notes[j], octave, frequency);
+                this.keys[i] = new PianoKey(nextY, this.sharpHeight, notes[j], octave, frequency, midiNoteNumber);
             }
             else if (notes[j] == 'a' || notes[j] == 'd' || notes[j] == 'g') {
                 this.height += this.adgHeight;
-                this.keys[i] = new PianoKey(nextY, this.adgHeight, notes[j], octave, frequency);
+                this.keys[i] = new PianoKey(nextY, this.adgHeight, notes[j], octave, frequency, midiNoteNumber);
             }
             else {
                 this.height += this.bcefHeight;
-                this.keys[i] = new PianoKey(nextY, this.bcefHeight, notes[j], octave, frequency);
+                this.keys[i] = new PianoKey(nextY, this.bcefHeight, notes[j], octave, frequency, midiNoteNumber);
             }
             if (this.keys[i].note == 'c') {
                 octave -= 1;
@@ -155,7 +156,7 @@ class Piano {
         if (key == undefined || key == null) {
             return;
         }
-        this.track.playNote(key.frequency, 0, 1, 1);
+        this.track.playNote(key.frequency, 0, 1, 1, key.midiNoteNumber);
     }
 
     getKey(x, y) {
@@ -175,12 +176,13 @@ class Piano {
 
 
 class PianoKey {
-    constructor(y, height, note, octave, frequency) {
+    constructor(y, height, note, octave, frequency, midiNoteNumber) {
         this.octave = octave;
         this.frequency = frequency || 440;
         this.y = y;
         this.height = height;
         this.note = note;
+        this.midiNoteNumber = midiNoteNumber;
         if (this.note[1] == '#') {
             this.black = true;
             this.width = Piano.whiteWidth / 2;
@@ -284,7 +286,7 @@ class Grid {
         for (var i = 0; i < numCells; i++) {
             if (i % cellsInMeasure == 0) {
                 this.context.strokeStyle = '#000';
-                this.measureCounterContext.fillText((i / 4) + 1, i * this.cellWidth + this.cellWidth / 4, 12);
+                this.measureCounterContext.fillText((i / 4) + 1, Piano.whiteWidth + i * this.cellWidth + this.cellWidth / 4, 12);
             }
             else {
                 this.context.strokeStyle = '#6E6E6E';
@@ -536,7 +538,7 @@ class Grid {
             this.addNotes(currentIndex, durationInIncrements, noteToDraw);
             if (draw == undefined || draw == true) {
                 this.drawNote(xPosition, yPosition, notePixelLength, this.keyHeight);
-                this.piano.track.playNote(keyIndex, 0, this.currentNoteDuration, 1);
+                this.piano.track.playNote(keyIndex, 0, this.currentNoteDuration, 1, keyIndex);
             }
             this.piano.track.addNote(new Note(keyIndex, beatNumber, this.currentNoteDuration, this.currentNoteVelocity));
         }
@@ -618,3 +620,47 @@ var initialize = function(startNote) {
     document.getElementById('main').style.height = height + "px";
     document.getElementById('quarter').style.border = "inset";
 };
+
+function calculateMidiNumber(octave, noteChar) {
+    ['g#', 'g', 'f#', 'f', 'e', 'd#', 'd', 'c#', 'c', 'b', 'a#', 'a'];
+    let nn = 12 + 12 * octave;
+    switch (noteChar) {
+    case 'c':
+        nn += 0;
+        break;
+    case 'c#':
+        nn += 1;
+        break;
+    case 'd':
+        nn += 2;
+        break;
+    case 'd#':
+        nn += 3;
+        break;
+    case 'e':
+        nn += 4;
+        break;
+    case 'f':
+        nn += 5;
+        break;
+    case 'f#':
+        nn += 6;
+        break;
+    case 'g':
+        nn += 7;
+        break;
+    case 'g#':
+        nn += 8;
+        break;
+    case 'a':
+        nn += 9;
+        break;
+    case 'a#':
+        nn += 10;
+        break;
+    case 'b':
+        nn += 11;
+        break;
+    }
+    return nn;
+}
