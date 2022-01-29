@@ -7,7 +7,7 @@ const gWebMidiPlayer = new WebMIDIPlayer();
 gWebMidiPlayer.requestMIDIAccess();
 
 class Track {
-    constructor(instrumentID, song) {
+    constructor(instrumentID, song, trackNumber) {
         this.song = song;
         //this.sched = new WebAudioScheduler({ context: audioCtx });
         this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
@@ -16,8 +16,12 @@ class Track {
         this.notes = [];
         this.instrumentID = instrumentID;
         this.instrument = instrumentArray[instrumentID];
+        this.trackNumber = trackNumber;
 
         this.gainNode.connect(masterGainNode);
+
+        // Program Change イベントを送信したか? (Web MIDIのみ)
+        this.programChanged = false;
     }
     /**
      * Add a single note to the track
@@ -75,6 +79,8 @@ class Track {
         /*for (var i = startNote; i < this.notes.length; i++) {
             this.audiolet.scheduler.addRelative(this.notes[i].beat - beat, this.playNote.bind(this, this.notes[i].frequency, this.notes[i].beat, this.notes[i].duration, this.notes[i].volume));
         }*/
+
+        /* Web Audio 用のスケジューラ */
         /*
         let callback = function (e) {
             let beatTime = 60.0 / this.song.tempo;
@@ -86,7 +92,8 @@ class Track {
         this.sched.start(callback);
         */
 
-        const scheduledNotes = [];
+        /* Web MIDI 用のスケジューラ */
+        const scheduledNotes = []; // ノートがスケジューリングされたか否か
         for (let i=0; i<this.notes.length; i++) {
             scheduledNotes.push(false);
         }
@@ -95,24 +102,34 @@ class Track {
             const requestedDuration = proxy.requestDuration;
             const playbackTime = proxy.playbackTime;
             for (let i=startNote; i<this.notes.length; i++) {
+                // プレイバック開始からノート開始までの実時間 (millis)
                 const absoluteTime = beatTime * (this.notes[i].beat - beat) * 1000;
                 if (absoluteTime < playbackTime) {
+                    // まだ再生位置に達していない
                     continue;
                 } else if (absoluteTime > playbackTime + requestedDuration) {
+                    // 今要求されている時間外のノートに到達したので終了する
                     break;
                 } else if (scheduledNotes[i]) {
+                    // 二重にスケジューリングされないようにする
                     continue;
                 }
 
+                // 実時間のノートの長さ (millis)
                 const absoluteDuration = beatTime * this.notes[i].duration * 1000;
-                const ch = 0x01;
+                // MIDI チャンネル
+                const ch = this.trackNumber;
+                // MIDI イベント
                 const noteOn = [0x90 | ch, this.notes[i].noteNumber, this.notes[i].volume];
                 const noteOff = [0x80 | ch, this.notes[i].noteNumber, 0];
+                // スケジューリング
                 proxy.scheduleWithDelay(noteOn, absoluteTime - playbackTime);
                 proxy.scheduleWithDelay(noteOff, absoluteTime + absoluteDuration - playbackTime);
+                // スケジューリングされたとしてフラグをつける
                 scheduledNotes[i] = true;
             }
         }.bind(this);
+        this.midiProgramChangeIfNeeded();
         this.mSched.start(callback);
     }
     /**
@@ -131,7 +148,8 @@ class Track {
     }
 
     playMidiNote(noteNumber, duration, volume) {
-        const ch = 0x01;
+        this.midiProgramChangeIfNeeded();
+        const ch = this.trackNumber;
         const velocity = Math.floor(100*volume);
         const noteOn = [0x90 | ch, noteNumber, velocity];
         const noteOff = [0x80 | ch, noteNumber, 0];
@@ -192,6 +210,13 @@ class Track {
     setVolume(volume){
         this.volume = volume;
         this.gainNode.gain.value = volume / 127.0;
+    }
+
+    midiProgramChangeIfNeeded() {
+        if (this.programChanged) return;
+        const pc = this.instrument.programChange;
+        const data = [0xc0 | this.trackNumber, pc];
+        this.mSched.scheduleNow(data);
     }
 }
 
