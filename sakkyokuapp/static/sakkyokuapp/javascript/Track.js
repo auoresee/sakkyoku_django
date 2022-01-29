@@ -3,10 +3,14 @@
  * @param instrument The instrument used in the track
  */
 
+const gWebMidiPlayer = new WebMIDIPlayer();
+gWebMidiPlayer.requestMIDIAccess();
+
 class Track {
     constructor(instrumentID, song) {
         this.song = song;
-        this.sched = new WebAudioScheduler({ context: audioCtx });
+        //this.sched = new WebAudioScheduler({ context: audioCtx });
+        this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.gainNode = audioCtx.createGain();
         this.setVolume(90);
         this.notes = [];
@@ -87,11 +91,21 @@ class Track {
      * @param {Number} duration
      * @param {Number} volume
      */
-    playNote(noteNumber, beat, duration, volume) {
-        let note = new Note(noteNumber, beat, duration, volume);
-        let beatTime = 60.0 / this.song.tempo;
-        this.instrument.play(this, note.noteNumber, note.duration * beatTime, note.volume);
+    playNote(noteNumber, beat, duration, volume, midiNoteNumber) {
+        // let note = new Note(noteNumber, beat, duration, volume);
+        // let beatTime = 60.0 / this.song.tempo;
+        // this.instrument.play(this, note.noteNumber, note.duration * beatTime, note.volume);
         //noteToPlay.connect(this.audiolet.output);
+        this.playMidiNote(midiNoteNumber, duration, volume);
+    }
+
+    playMidiNote(noteNumber, duration, volume) {
+        const ch = 0x01;
+        const velocity = 100;
+        const noteOn = [0x90 | ch, noteNumber, velocity];
+        const noteOff = [0x80 | ch, noteNumber, 0];
+        this.mSched.scheduleNow(noteOn);
+        this.mSched.scheduleNowWithDelay(noteOff, duration*1000);
     }
     /**
      * Get the index where the Beat should be

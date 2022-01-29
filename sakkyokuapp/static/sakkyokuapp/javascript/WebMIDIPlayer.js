@@ -8,7 +8,7 @@
 class WebMIDIPlayer {
     constructor() {
         this.midi = null;
-        this.outputNumber = 0;
+        this.outputId = "output-0";
     }
 
     /**
@@ -33,8 +33,8 @@ class WebMIDIPlayer {
         return this.midi.outputs;
     }
 
-    setOutputPort(portNumber) {
-        this.outputNumber = portNumber;
+    setOutputPort(outputId) {
+        this.outputId = outputId;
     }
 
     forceClearOutputQueue() {
@@ -42,15 +42,17 @@ class WebMIDIPlayer {
     }
 
     outputImmediately(data) {
+        console.log("scheduled immediately: " + data);
         this._currentOutput().send(data);
     }
 
     outputWithTimestamp(data, timestamp) {
+        console.log("scheduled with timestamp: " + data);
         this._currentOutput().send(data, timestamp);
     }
 
     _currentOutput() {
-        return this.midi.outputs.get(this.outputNumber);
+        return this.midi.outputs.get(this.outputId);
     }
 
     _checkMidiState() {
@@ -82,6 +84,15 @@ class WebMIDIScheduler {
         if (this._currentLoop !== null) {
             clearInterval(this._currentLoop);
         }
+    }
+
+    scheduleNow(data) {
+        this.player.outputImmediately(data);
+    }
+
+    scheduleNowWithDelay(data, delayMillis) {
+        const ts = performance.now() + delayMillis;
+        this.player.outputWithTimestamp(data, ts);
     }
 
     _tick() {
