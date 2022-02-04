@@ -4,12 +4,22 @@
  */
 
 const gWebMidiPlayer = new WebMIDIPlayer();
-gWebMidiPlayer.requestMIDIAccess();
+let gWebMidiIsReady = false;
+try {
+    gWebMidiPlayer.requestMIDIAccess();
+    gWebMidiIsReady = true;
+} catch (e) {
+    console.log(e);
+    console.log("cannot use webMidi");
+}
+
+// .value is either "webaudio" or "webmidi"
+const backendSelector = document.querySelector('#backendSelector');
 
 class Track {
     constructor(instrumentID, song, trackNumber) {
         this.song = song;
-        //this.sched = new WebAudioScheduler({ context: audioCtx });
+        this.sched = new WebAudioScheduler({ context: audioCtx });
         this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.gainNode = audioCtx.createGain();
         this.setVolume(90);
@@ -22,6 +32,15 @@ class Track {
 
         // Program Change イベントを送信したか? (Web MIDIのみ)
         this.programChanged = false;
+
+        // response to backend change
+        this.backend = backendSelector.value;
+        backendSelector.addEventListener('change', (ev) => {
+            if (this.sched != null) this.sched.stop();
+            if (this.mSched != null) this.mSched.stop();
+            this.backend = ev.target.value;
+            console.log(`backend changed to ${this.backend}`);
+        });
     }
     /**
      * Add a single note to the track
@@ -80,8 +99,25 @@ class Track {
             this.audiolet.scheduler.addRelative(this.notes[i].beat - beat, this.playNote.bind(this, this.notes[i].frequency, this.notes[i].beat, this.notes[i].duration, this.notes[i].volume));
         }*/
 
+
+        // this.playWithWebAudio(startNote, beat);
+        //this.playWithWebMidi(startNote, beat);
+        this.playWithBackend(startNote, beat);
+    }
+
+    playWithBackend(startNote, beat) {
+        switch (this.backend) {
+        case 'webaudio':
+            this.playWithWebAudio(startNote, beat);
+            break;
+        case 'webmidi':
+            this.playWithWebMidi(startNote, beat);
+            break;
+        }
+    }
+
+    playWithWebAudio(startNote, beat) {
         /* Web Audio 用のスケジューラ */
-        /*
         let callback = function (e) {
             let beatTime = 60.0 / this.song.tempo;
             const delay = 0.1;
@@ -90,8 +126,9 @@ class Track {
             }
         }.bind(this);
         this.sched.start(callback);
-        */
+    }
 
+    playWithWebMidi(startNote, beat) {
         /* Web MIDI 用のスケジューラ */
         const scheduledNotes = []; // ノートがスケジューリングされたか否か
         for (let i=0; i<this.notes.length; i++) {
@@ -133,6 +170,11 @@ class Track {
         this.midiProgramChangeIfNeeded();
         this.mSched.start(callback);
     }
+
+    playNote(noteNumber, beat, duration, volume, midiNoteNumber) {
+        this.playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber);
+    }
+
     /**
      * Play a note
      * @param {Number} frequency
@@ -140,11 +182,14 @@ class Track {
      * @param {Number} duration
      * @param {Number} volume
      */
-    playNote(noteNumber, beat, duration, volume, midiNoteNumber) {
-        // let note = new Note(noteNumber, beat, duration, volume);
-        // let beatTime = 60.0 / this.song.tempo;
-        // this.instrument.play(this, note.noteNumber, note.duration * beatTime, note.volume);
-        //noteToPlay.connect(this.audiolet.output);
+    playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber) {
+        let note = new Note(noteNumber, beat, duration, volume);
+        let beatTime = 60.0 / this.song.tempo;
+        this.instrument.play(this, note.noteNumber, note.duration * beatTime, note.volume);
+        // noteToPlay.connect(this.audiolet.output);   
+    }
+
+    playNoteWithWebMidi(noteNumber, beat, duration, volume, midiNoteNumber) {
         this.playMidiNote(midiNoteNumber, duration, volume, noteNumber);
     }
 
@@ -233,6 +278,10 @@ class Track {
             const data = [0xc0 | this.trackNumber, pc];
             this.mSched.scheduleNow(data);
         }
+    }
+
+    resetBackend() {
+
     }
 }
 
