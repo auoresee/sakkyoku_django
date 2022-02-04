@@ -3,8 +3,10 @@ import os
 import glob
 from datetime import datetime
 from django.utils.timezone import make_aware
+from .mididecoder import *
 
 from .models import Song
+from .songdata import SongData
 
 class SongManager:
     SONGLIST_RELEASE_ANY = 1		#no matter whether released
@@ -70,6 +72,14 @@ class SongManager:
                 maxid = id
         
         return maxid + 1
+
+    #MIDIデータからsongデータを作成
+    def generateSongFromMIDI(self, mididata):
+        channels = midi2channels(mididata)
+        songdata = SongData()
+        songdata.loadSMFChannels(channels)
+        songjson = json.dumps(songdata.as_dict())
+        return self.save_song(songjson, self.s_user_id)
 
     def setIDtoSong(self, song):
         if(song['userID'] == 0):

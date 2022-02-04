@@ -71,6 +71,17 @@
                 <button id="create-new-song-button">新しい曲の作成</button>
                 <span id="status-text"></span>
             </div>
+
+            <form id="upload-midi" action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                MIDIファイルのインポート: <input type="file" id="midi-file" name="mididata" value="">
+                <input type="submit" name="submit" id="button-midi-submit" value="インポート">
+            </form>
+
+            <div id="edit-controls">
+                <button id="octave-up-button" onclick="sequencer.transposeCurrentTrack(12)">1オクターブ上げる</button>
+                <button id="octave-down-button" onclick="sequencer.transposeCurrentTrack(-12)">1オクターブ下げる</button>
+            </div>
             
             <a href="index.html">トップへ</a>
         </div>

@@ -93,3 +93,15 @@ def api_save_song(request):
         request.session['userID'] = s_user_id
     res = songManager.save_song(songjson, s_user_id)
     return HttpResponse(res)
+
+def api_import_midi(request):
+    songManager = SongManager()
+    print(request.POST)
+    mididata = request.FILES['mididata']
+    s_user_id = request.session.get('userID', 0)
+    if(s_user_id == 0 or s_user_id == None):
+        s_user_id = register_user()
+        request.session['userID'] = s_user_id
+    songManager.s_user_id = s_user_id
+    res = songManager.generateSongFromMIDI(mididata)
+    return HttpResponse(res)
