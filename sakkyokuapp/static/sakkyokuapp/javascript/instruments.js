@@ -69,20 +69,21 @@ var instrumentArray = [
             }
         },
         programChange: null, // TODO: GM Drumset
-        mapNote: (freq, midiNoteNumber) => {
-            const frequency = calculateFrequency(midiNoteNumber);
-            if(frequency >= 1000){
-                return 49;
-            }else if(frequency >= 700){
-                return 46;
-            }else if(frequency >= 450){
-                return 42;
-            }else if(frequency >= 250){
-                return 38;
-            }else{
-                return 35;
-            }
-        },
+        // mapNote: (freq, midiNoteNumber) => {
+        //     const frequency = calculateFrequency(midiNoteNumber);
+        //     if(frequency >= 1000){
+        //         return 49;
+        //     }else if(frequency >= 700){
+        //         return 46;
+        //     }else if(frequency >= 450){
+        //         return 42;
+        //     }else if(frequency >= 250){
+        //         return 38;
+        //     }else{
+        //         return 35;
+        //     }
+        // },
+        mapNote: null,
         isDrum: true
     },
 
