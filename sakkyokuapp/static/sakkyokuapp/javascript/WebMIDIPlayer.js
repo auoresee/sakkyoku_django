@@ -20,6 +20,16 @@ class WebMIDIPlayer {
             (ma) => {
                 console.log("got midi access");
                 this.midi = ma;
+                
+                // default output set
+                const outs = this.listOutputPorts();
+                let name = null;
+                outs.forEach(o => {
+                    if (name == null) {
+                        name = o.id;
+                    };
+                });
+                this.setOutputPort(name);
             },
             (msg) => {
                 console.log("failed to get midi access");
@@ -34,6 +44,7 @@ class WebMIDIPlayer {
     }
 
     setOutputPort(outputId) {
+        console.log(`output port set: ${outputId}`);
         this.outputId = outputId;
     }
 
@@ -119,7 +130,7 @@ class WebMIDISchedulerProxy {
     constructor(scheduler) {
         this._scheduler = scheduler;
         this._entries = [];
-        this.requestDuration = this._scheduler.interval*1.5;
+        this.requestDuration = this._scheduler.interval*2;
         this.playbackTime = this._scheduler.playbackTimeMillis;
     }
 
