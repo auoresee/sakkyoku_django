@@ -6,8 +6,7 @@
 const gWebMidiPlayer = new WebMIDIPlayer();
 let gWebMidiIsReady = false;
 try {
-    gWebMidiPlayer.requestMIDIAccess();
-    gWebMidiIsReady = true;
+    gWebMidiIsReady = gWebMidiPlayer.requestMIDIAccess();
 } catch (e) {
     console.log(e);
     console.log("cannot use webMidi");
