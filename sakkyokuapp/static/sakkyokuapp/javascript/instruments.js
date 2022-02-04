@@ -50,7 +50,7 @@ var instrumentArray = [
             else if(noteNumber == 49 || noteNumber == 57){
                 soundManager.playSoundPitch("CrashCymbal", false, pitch, 5, track.gainNode);
             }
-            else if(noteNumber < 65) return
+            if(noteNumber < 65) return;
             
             let frequency = calculateFrequency(noteNumber);
             if(frequency >= 1000){
