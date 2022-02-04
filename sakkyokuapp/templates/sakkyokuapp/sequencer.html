@@ -12,19 +12,6 @@
         {% load static %}
 
         {% csrf_token %}
-
-        <script src="{% static 'sakkyokuapp/javascript/WebMIDIPlayer.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/web-audio-scheduler.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/SoundManager.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/QueryProcessor.js' %}"></script> 
-        <script src="{% static 'sakkyokuapp/javascript/instruments.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/Track.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/Song.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/Sequencer.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/ui.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/Controls.js' %}"></script>
-        <script src="{% static 'sakkyokuapp/javascript/SongLoader.js' %}"></script> 
-        <script src="{% static 'sakkyokuapp/javascript/SequencerInit.js' %}"></script> 
         
         <title>作曲.jp</title>
         <link type="text/css" rel="stylesheet" href="{% static 'sakkyokuapp/style/main.css' %}">
@@ -119,6 +106,19 @@
             </div>
         </div>    
     </div>
+
+    <script src="{% static 'sakkyokuapp/javascript/WebMIDIPlayer.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/web-audio-scheduler.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/SoundManager.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/QueryProcessor.js' %}"></script> 
+    <script src="{% static 'sakkyokuapp/javascript/instruments.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/Track.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/Song.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/Sequencer.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/ui.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/Controls.js' %}"></script>
+    <script src="{% static 'sakkyokuapp/javascript/SongLoader.js' %}"></script> 
+    <script src="{% static 'sakkyokuapp/javascript/SequencerInit.js' %}"></script> 
 
     </body>
 </html>
