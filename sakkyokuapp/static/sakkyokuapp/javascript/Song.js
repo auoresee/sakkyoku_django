@@ -18,7 +18,7 @@ class Song {
      * @param instrument
      */
     createTrack(instrumentID) {
-        this.tracks[this.tracks.length] = new Track(instrumentID, this);
+        this.tracks[this.tracks.length] = new Track(instrumentID, this, this.tracks.length);
         return this.tracks[this.tracks.length - 1];
     }
     /**
@@ -91,7 +91,7 @@ class Song {
         this.lastUpdatedDate = obj.lastUpdatedDate;
         let json_tracks = obj.tracks;
         for(let i = 0; i < json_tracks.length; i++){
-            let track = new Track(0, this);
+            let track = new Track(0, this, i);
             track.loadJSONObject(json_tracks[i]);
             this.tracks[i] = track;
         }
