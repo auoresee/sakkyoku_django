@@ -37,18 +37,35 @@ var instrumentArray = [
         name: "Percussion",
         displayName: "ドラム",
         play: function(track, noteNumber, duration, volume) {
-            let frequency = calculateFrequency(noteNumber);
             let pitch = 1;
+            if(noteNumber == 35 || noteNumber == 36){
+                soundManager.playSoundPitch("BassDrum", false, pitch, 1, track.gainNode);
+            }
+            else if(noteNumber == 38 || noteNumber == 40){
+                soundManager.playSoundPitch("Snare", false, pitch, 1, track.gainNode);
+            }
+            else if(noteNumber == 42 || noteNumber == 44){
+                soundManager.playSoundPitch("HihatClosed", false, pitch, 1, track.gainNode);
+            }
+            else if(noteNumber == 46 || noteNumber == 51 || noteNumber == 59){
+                soundManager.playSoundPitch("HihatOpen", false, pitch, 5, track.gainNode);
+            }
+            else if(noteNumber == 49 || noteNumber == 57){
+                soundManager.playSoundPitch("CrashCymbal", false, pitch, 5, track.gainNode);
+            }
+            else if(noteNumber < 65) return
+            
+            let frequency = calculateFrequency(noteNumber);
             if(frequency >= 1000){
-                soundManager.playSoundPitch("CrashCymbal", false, pitch, duration, track.gainNode);
+                soundManager.playSoundPitch("CrashCymbal", false, pitch, 5, track.gainNode);
             }else if(frequency >= 700){
-                soundManager.playSoundPitch("HihatOpen", false, pitch, duration, track.gainNode);
+                soundManager.playSoundPitch("HihatOpen", false, pitch, 5, track.gainNode);
             }else if(frequency >= 450){
-                soundManager.playSoundPitch("HihatClosed", false, pitch, duration, track.gainNode);
+                soundManager.playSoundPitch("HihatClosed", false, pitch, 1, track.gainNode);
             }else if(frequency >= 250){
-                soundManager.playSoundPitch("Snare", false, pitch, duration, track.gainNode);
+                soundManager.playSoundPitch("Snare", false, pitch, 1, track.gainNode);
             }else{
-                soundManager.playSoundPitch("BassDrum", false, pitch, duration, track.gainNode);
+                soundManager.playSoundPitch("BassDrum", false, pitch, 1, track.gainNode);
             }
         },
         programChange: null, // TODO: GM Drumset

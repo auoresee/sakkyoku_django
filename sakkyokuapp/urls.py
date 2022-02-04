@@ -29,5 +29,6 @@ urlpatterns = [
     path('sequencer.html', views.sequencer_page),
     path("api/songs/", views.api_get_song_list),
     path("api/songs/<int:song_id>", views.api_get_song),
-    path("api/songs/save", views.api_save_song)
+    path("api/songs/save", views.api_save_song),
+    path("api/import/midi", views.api_import_midi)
 ]

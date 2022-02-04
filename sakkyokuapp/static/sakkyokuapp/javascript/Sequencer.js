@@ -192,6 +192,27 @@ class Sequencer {
         }
     }
 
+    processImportResponse(response){
+        let res = response.responseText;
+
+        console.debug(res);
+
+        if(res.charAt(0) == "!"){   //error
+            alert(res.substring(1));
+            return;
+        }
+        if(res.charAt(0) != "{"){   //not json
+            alert("Invalid response: " + res);
+            return;
+        }
+
+        this.song = new Song();
+        this.song.loadJSON(res);
+        
+        this.setSong(this.song);
+    }
+
+
     releaseSong(){
         if(!this.song.name){        //when empty or null
             alert("曲名を入力してください");
@@ -237,6 +258,14 @@ class Sequencer {
     //change instrument of the current track
     changeCurrentTrackInstrument(instrumentID) {
         this.changeTrackInstrument(this.index, instrumentID);
+    }
+
+    transposeCurrentTrack(num){
+        let track = this.tracks[this.index];
+        for(let i = 0; i < track.notes.length; i++){
+            track.notes[i].noteNumber += num
+        }
+        this.drawMain(this.tracks[this.index]);
     }
 }
 

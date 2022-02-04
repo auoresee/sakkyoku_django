@@ -544,7 +544,7 @@ class Grid {
         }
     }
     addNote(note) {
-        var currentIndex = note.beat * this.cellWidth / this.cellBeatLength / this.smallestPixelBeatIncrement;
+        var currentIndex = Math.round(note.beat * this.cellWidth / this.cellBeatLength / this.smallestPixelBeatIncrement);
         var durationInIncrements = note.duration / this.smallestBeatIncrement;
         var notePixelLength = note.duration / this.cellBeatLength * this.cellWidth;
         var noteToDraw = new DrawnNote(note.beat * this.cellWidth / this.cellBeatLength, this.startY + (noteNumberOffset - note.noteNumber) * this.keyHeight, notePixelLength, true);
@@ -555,6 +555,7 @@ class Grid {
         if (durationIncrements == 0) {
             return;
         }
+        else if (this.noteXLookup[currentIndex] == null) return;
         else if (this.noteXLookup[currentIndex].length == 0) {
             this.noteXLookup[currentIndex] = [noteToDraw];
             this.addNotes(currentIndex + 1, durationIncrements - 1, noteToDraw);
@@ -612,6 +613,39 @@ class DrawnNote {
     }
 }
 
+MIDI_UPLOAD_URL = "/api/import/midi"
+
+window.addEventListener('load', function(){
+    $('#upload-midi').on('submit', function(e) {
+        e.preventDefault();
+
+        form = $("#upload-midi").get(0);
+
+        var fd = new FormData(form);
+
+        if(fd == null || fd == ""){        //when empty or null
+            return;
+        }
+
+        var csrf_token = getCookie("csrftoken");
+
+        $.ajax(
+            {
+                url: MIDI_UPLOAD_URL,
+                type:'POST',
+                data: fd,
+                beforeSend: function(xhr, settings) {
+                    xhr.setRequestHeader("X-CSRFToken", csrf_token);
+                },
+                error:function(){},
+                complete: sequencer.processImportResponse.bind(sequencer),
+                'processData': false,
+                'contentType': false,
+                dataType:'json'
+            }
+        );
+    });
+});
 
 var initialize = function(startNote) {
     var menuHeight = document.getElementById('menu').clientHeight;
