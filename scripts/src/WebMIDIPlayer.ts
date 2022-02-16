@@ -88,7 +88,7 @@ export class WebMIDIPlayer {
 export class WebMIDIScheduler {
     private player: WebMIDIPlayer;
     interval: number
-    private callback;
+    private callback: ((proxy: WebMIDISchedulerProxy) => void) | null;
     private isRunning: boolean;
     private _currentLoop: number | null;
 
@@ -107,7 +107,7 @@ export class WebMIDIScheduler {
         this._playbackStartedTs = null;
     }
 
-    start(callback) {
+    start(callback: ((proxy: WebMIDISchedulerProxy) => void) | null) {
         this.callback = callback;
         this.isRunning = true;
         this.playbackTimeMillis = 0;
@@ -133,6 +133,10 @@ export class WebMIDIScheduler {
     _tick() {
         const timestamp = performance.now();
         const proxy = new WebMIDISchedulerProxy(this);
+        if (this.callback == null) {
+            console.warn("callback is null");
+            return;
+        }
         this.callback(proxy);
         const entries = proxy._entries;
 
@@ -157,7 +161,7 @@ export class WebMIDISchedulerProxy {
     requestDuration: number;
     playbackTime: number;
 
-    constructor(scheduler) {
+    constructor(scheduler: WebMIDIScheduler) {
         this._scheduler = scheduler;
         this._entries = [];
         this.requestDuration = this._scheduler.interval*2;
