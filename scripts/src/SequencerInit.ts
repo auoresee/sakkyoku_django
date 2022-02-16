@@ -1,5 +1,6 @@
 import { Sequencer } from "./Sequencer";
 import { songLoader } from "./SongLoader";
+import { initialize } from "./ui";
 
 export let sequencer: Sequencer | null = null;
 

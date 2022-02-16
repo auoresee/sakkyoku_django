@@ -647,7 +647,7 @@ window.addEventListener('load', function(){
     });
 });
 
-var initialize = function(startNote) {
+export const initialize = function() {
     var menuHeight = document.getElementById('menu').clientHeight;
     var counterHeight = document.getElementById('measure-counter').clientHeight;
     var height = window.innerHeight - menuHeight - counterHeight - 20;
