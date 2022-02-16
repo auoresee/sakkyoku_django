@@ -1,7 +1,19 @@
+import { Track } from './Track';
+
 /**
  * A Song contains 0 or more tracks, a tempo
  */
-class Song {
+export class Song {
+    name: string;
+    tempo: number;
+    tracks: Track[];
+    songID: number; //0 if not saved in the server
+    userID: number;
+    isOnRelease: boolean; //whether this song is accessible by the public
+    private createdDate: number;
+    private releasedDate: number;
+    lastUpdatedDate: number;
+
     constructor() {
         this.name = "New Song";
         this.tempo = 120;
@@ -17,7 +29,7 @@ class Song {
      * Create a new track for the song
      * @param instrument
      */
-    createTrack(instrumentID) {
+    createTrack(instrumentID: number) {
         this.tracks[this.tracks.length] = new Track(instrumentID, this, this.tracks.length);
         return this.tracks[this.tracks.length - 1];
     }
@@ -25,11 +37,11 @@ class Song {
      * Change the tempo of the track
      * @param newTempo New tempo
      */
-    changeTempo(newTempo) {
+    changeTempo(newTempo: number) {
         this.tempo = newTempo;
     }
 
-    release(){
+    release() {
         this.isOnRelease = true;
         this.releasedDate = Date.now();
     }
@@ -38,7 +50,7 @@ class Song {
      * Play the song at the specified beat
      * @param {Number} beat
      */
-    play(beat) {
+    play(beat: number) {
         for (var i = 0; i < this.tracks.length; i++) {
             this.tracks[i].play(beat);
         }
@@ -52,7 +64,12 @@ class Song {
     }
 
 
-    getJSON() {
+    getJSON(): string {
+        let json_tracks = [];
+        for(let i = 0; i < this.tracks.length; i++){
+            json_tracks[i] = this.tracks[i].getJSONObject();
+        }
+
         let jsonobj = {
             name: this.name,
             tempo: this.tempo,
@@ -62,32 +79,30 @@ class Song {
             createdDate: this.createdDate,
             releasedDate: this.releasedDate,
             lastUpdatedDate: this.lastUpdatedDate,
+            tracks: json_tracks
         };
-        let json_tracks = [];
-        for(let i = 0; i < this.tracks.length; i++){
-            json_tracks[i] = this.tracks[i].getJSONObject();
-        }
-        jsonobj.tracks = json_tracks;
-
         return JSON.stringify(jsonobj);
     }
 
-    loadJSON(json){
+    loadJSON(json: string) {
         let obj = JSON.parse(json);
         this.loadJSONObject(obj);
     }
 
-    loadJSONObject(obj){
+    loadJSONObject(obj: SongJSON) {
         this.name = obj.name;
         this.tempo = obj.tempo;
         this.songID = obj.songID;
         this.userID = obj.userID;
         this.isOnRelease = obj.isOnRelease;
         this.createdDate = obj.createdDate;
-        this.releasedDate = obj.releasedDate;
+        
         if( ! ('releasedDate' in obj) ){        //for compatibility
             this.releasedDate = new Date(2000, 0, 1).getTime();
+        } else {
+            this.releasedDate = obj.releasedDate as number;
         }
+
         this.lastUpdatedDate = obj.lastUpdatedDate;
         let json_tracks = obj.tracks;
         for(let i = 0; i < json_tracks.length; i++){
@@ -99,3 +114,15 @@ class Song {
 
 
 }
+
+type SongJSON = {
+    name: string,
+    tempo: number,
+    songID: number,
+    userID: number,
+    isOnRelease: boolean,
+    createdDate: number,
+    releasedDate?: number,
+    lastUpdatedDate: number,
+    tracks: any
+};

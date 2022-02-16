@@ -1,4 +1,15 @@
-var instrumentArray = [      
+import { soundManager } from './SoundManager';
+import { Track } from './Track';
+
+export type InstrumentInfo = {
+    name: string,
+    displayName: string,
+    play: (track: Track, noteNumber: number, duration: number, volume: number) => void,
+    programChange: number | null,
+    isDrum?: boolean
+}
+
+export const instrumentArray: InstrumentInfo[] = [      
     {
         name: "Piano",
         displayName: "ピアノ",
@@ -83,7 +94,6 @@ var instrumentArray = [
         //         return 35;
         //     }
         // },
-        mapNote: null,
         isDrum: true
     },
 
@@ -154,22 +164,22 @@ var instrumentArray = [
     },
 ];
 
-instrumentList = [];
-instrumentNameToID = [];
+export const instrumentList: { [key: string]: InstrumentInfo } = {};
+export const instrumentNameToID: { [key: string]: number } = {};
 for (let i = 0; i < instrumentArray.length; i++){
     let instr = instrumentArray[i];
     instrumentList[instr.name] = instr;
     instrumentNameToID[instr.name] = i;
 }
 
-function calculateFrequency(noteNumber){
+function calculateFrequency(noteNumber: number): number {
     const c4 = 60;
     let c4rel = noteNumber - c4;
     let octave = Math.floor(c4rel / 12.0);
     let octavemul = (1 << (octave + 10)) / 1024.0;
     let key = (c4rel + 120) % 12;    //floor remainder
     let freq = [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88];
-    
+
     let result = freq[key] * octavemul;
     /*if(sequencer != null && sequencer.song.songID == 20) {
         $("#status-text").append(""+result+"<br>");
@@ -177,7 +187,7 @@ function calculateFrequency(noteNumber){
     return result;
 }
 
-function loadSoundFiles(){
+export function loadSoundFiles(){
     soundManager.loadSound("piano_A4", "sound/piano_A4.wav");
     soundManager.loadSound("RockOrgan_A4", "sound/RockOrgan_A4.wav");
     soundManager.loadSound("SopranoSax_A4", "sound/SopranoSax_A4.wav");

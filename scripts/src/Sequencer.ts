@@ -1,7 +1,27 @@
+import { Controls } from "./Controls";
+import { instrumentArray, InstrumentInfo, instrumentList, instrumentNameToID } from "./instruments";
+import { Song } from "./Song";
+import { Note, Track } from "./Track";
+import { Grid, Piano } from "./ui";
+
 const DEFAULT_TRACK_NUM = 8;
 const UPLOAD_URL = "/api/songs/save";
 
-class Sequencer {
+export class Sequencer {
+    song: Song;
+    private instruments: {
+        [key: string]: InstrumentInfo;
+    };
+    private tracks: Track[];
+    private trackNames: string[];
+    private pianos: Piano[];
+    private grids: Grid[];
+    private index: number;
+
+    private isWriteMode: boolean;
+
+    //menu   
+    private controls: Controls;
 
     constructor() {
         this.song = new Song();
@@ -15,18 +35,18 @@ class Sequencer {
         this.isWriteMode = true;
 
         //menu   
-        this.controls = new Controls(this.song, this.piano, grid, this);
+        this.controls = new Controls(this.song, null as any, null as any, this); // TODO: ?
         this.controls.addListeners();
 
         let saveExist = this.restoreLocalSavedJSON();
-        if(!saveExist){
+        if(!saveExist) {
             console.debug("Local save doesn't exist");
             this.createNewSong();
         }
 
-        setInterval(function () {
+        setInterval(() => {
             this.save();
-        }.bind(this), 5000);
+        }, 5000);
 
     }
 
@@ -50,12 +70,12 @@ class Sequencer {
         }
     }
 
-    generateTrack(instrument_name){
-        let new_track = this.song.createTrack(instrumentNameToID[instrument_name]);
+    generateTrack(instrumentName: string){
+        let new_track = this.song.createTrack(instrumentNameToID[instrumentName]);
         this.addTrack(new_track);
     }
 
-    addTrack(track){
+    addTrack(track: Track) {
         let i = this.trackNames.length;
         this.trackNames[i] = this.generateTrackName(i, track.instrument);
         this.pianos[i] = new Piano(20, 40, 30, track);
@@ -63,7 +83,7 @@ class Sequencer {
         this.controls.addTrack(this.trackNames[i]);
     }
 
-    drawMain(track, savedNotes) {
+    drawMain(track: Track, savedNotes: Note[]) {
         this.index = this.tracks.indexOf(track);
         this.pianos[this.index].drawPiano('c', 7, 60);
         this.grids[this.index].drawGrid(100, 1, this.pianos[this.index], savedNotes);
@@ -82,7 +102,7 @@ class Sequencer {
         return result;
     }
 
-    restoreSavedJSON(json){
+    restoreSavedJSON(json: string | null | undefined) {
         if(json == null || json == undefined) return false;
         
         //this.song.changeTempo(parseInt(tempo, 10));
@@ -93,7 +113,7 @@ class Sequencer {
         return true;
     }
 
-    setMode(is_write_mode){
+    setMode(is_write_mode: boolean){
         if(is_write_mode == this.isWriteMode) return;
 
         this.isWriteMode = is_write_mode;
@@ -107,7 +127,7 @@ class Sequencer {
         }
     }
 
-    setSong(song){
+    setSong(song: Song) {
         this.song = song;
         this.tracks = this.song.tracks;
         this.trackNames = [];
@@ -116,7 +136,7 @@ class Sequencer {
         this.index = 0;
 
         let tempo = song.tempo;
-        document.getElementById('tempo').value = tempo;
+        (document.getElementById('tempo') as HTMLInputElement).value = tempo as unknown as string;
 
         this.controls.clearAllTrackFromSelector();
 
@@ -135,7 +155,7 @@ class Sequencer {
             this.drawMain(this.tracks[i], this.tracks[i].notes);
         }
 
-        this.drawMain(this.tracks[0]);
+        this.drawMain(this.tracks[0], []);
     }
 
     uploadSong(){
@@ -144,7 +164,7 @@ class Sequencer {
             return;
         }
 
-        var csrf_token = getCookie("csrftoken");
+        const csrf_token = getCookie("csrftoken") as string;
 
         this.save();
 
@@ -165,7 +185,7 @@ class Sequencer {
         );
     }
 
-    processUploadResponse(response){
+    processUploadResponse(response: { responseText: any; }){
         let res = response.responseText;
 
         console.debug(res);
@@ -192,7 +212,7 @@ class Sequencer {
         }
     }
 
-    processImportResponse(response){
+    processImportResponse(response: JQuery.jqXHR<any>){
         let res = response.responseText;
 
         console.debug(res);
@@ -231,20 +251,20 @@ class Sequencer {
     getCurrentTrackName() {
         return this.trackNames[this.index];
     }
-    changeTrack(trackID) {
+    changeTrack(trackID: number) {
         let track = this.tracks[trackID];
         this.controls.instrumentsElement.selectedIndex = track.instrumentID;
         this.controls.setTrackVolumeSliderValue(track.volume);
-        this.drawMain(this.tracks[trackID]);
+        this.drawMain(this.tracks[trackID], []);
         console.debug(this.song.getJSON())
     }
 
-    generateTrackName(trackID, instrument){
+    generateTrackName(trackID: number, instrument: InstrumentInfo){
         return "" + (trackID + 1) + ": " + instrument.displayName;
     }
 
     //change instrument of a track
-    changeTrackInstrument(trackID, instrumentID) {
+    changeTrackInstrument(trackID: number, instrumentID: number) {
         let track = this.tracks[trackID];
         let new_instr = instrumentArray[instrumentID];
         track.instrument = new_instr;
@@ -256,21 +276,21 @@ class Sequencer {
     }
 
     //change instrument of the current track
-    changeCurrentTrackInstrument(instrumentID) {
+    changeCurrentTrackInstrument(instrumentID: number) {
         this.changeTrackInstrument(this.index, instrumentID);
     }
 
-    transposeCurrentTrack(num){
+    transposeCurrentTrack(num: number){
         let track = this.tracks[this.index];
         for(let i = 0; i < track.notes.length; i++){
             track.notes[i].noteNumber += num
         }
-        this.drawMain(this.tracks[this.index]);
+        this.drawMain(this.tracks[this.index], []);
     }
 }
 
 // csrf_tokenの取得に使う
-function getCookie(name) {
+export function getCookie(name: string | any[]) {
     var cookieValue = null;
     if (document.cookie && document.cookie !== '') {
         var cookies = document.cookie.split(';');

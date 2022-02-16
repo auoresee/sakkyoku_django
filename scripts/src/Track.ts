@@ -3,21 +3,43 @@
  * @param instrument The instrument used in the track
  */
 
+import { Song } from "./Song";
+import { InstrumentInfo, instrumentArray, instrumentNameToID } from "./instruments";
+import { WebMIDISchedulerProxy, WebMIDIPlayer, WebMIDIScheduler } from "./WebMIDIPlayer";
+import { audioCtx, masterGainNode } from "./SoundManager";
+import WebAudioScheduler from './web-audio-scheduler';
+
 const gWebMidiPlayer = new WebMIDIPlayer();
 let gWebMidiIsReady = false;
 try {
-    gWebMidiIsReady = gWebMidiPlayer.requestMIDIAccess();
+    gWebMidiPlayer.requestMIDIAccess();
+    gWebMidiIsReady = true;
 } catch (e) {
     console.log(e);
     console.log("cannot use webMidi");
 }
 
 // .value is either "webaudio" or "webmidi"
-const backendSelector = document.querySelector('#backendSelector');
+const backendSelector = document.querySelector('#backendSelector') as HTMLSelectElement;
 
-class Track {
-    constructor(instrumentID, song, trackNumber) {
+export class Track {
+    private song: Song;
+    private sched: any
+    private mSched: WebMIDIScheduler;
+    gainNode: GainNode
+    notes: Note[];
+    instrumentID: number
+    instrument: InstrumentInfo
+    private trackNumber: number
+    // Program Change イベントを送信したか? (Web MIDIのみ)
+    private programChanged = false;
+    // response to backend change
+    private backend: "webaudio" | "webmidi";
+    volume: number = 90;
+
+    constructor(instrumentID: number, song: Song, trackNumber: number) {
         this.song = song;
+        // @ts-ignore
         this.sched = new WebAudioScheduler({ context: audioCtx });
         this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.gainNode = audioCtx.createGain();
@@ -33,11 +55,11 @@ class Track {
         this.programChanged = false;
 
         // response to backend change
-        this.backend = backendSelector.value;
+        this.backend = backendSelector.value as any;
         backendSelector.addEventListener('change', (ev) => {
             if (this.sched != null) this.sched.stop();
             if (this.mSched != null) this.mSched.stop();
-            this.backend = ev.target.value;
+            this.backend = (ev.target as HTMLSelectElement).value as any;
             console.log(`backend changed to ${this.backend}`);
         });
     }
@@ -45,7 +67,7 @@ class Track {
      * Add a single note to the track
      * @param {Note} The note to add
      */
-    addNote(note) {
+    addNote(note: Note) {
         //binary search tree seems kind of overkill for now
         for (var i = 0; i < this.notes.length; i++) {
             if (this.notes[i].beat >= note.beat) {
@@ -62,7 +84,7 @@ class Track {
      * @param {Number} beat
      * @param {Number} duration
      */
-    removeNote(noteNumber, beat, duration, volume) {
+    removeNote(noteNumber: number, beat: number, duration: number, volume: number) {
         //binary search tree seems kind of overkill for now
         for (var i = 0; i < this.notes.length; i++) {
             //if (this.notes[i].frequency == frequency && this.notes[i].duration == duration && this.notes[i].beat == beat) {
@@ -80,8 +102,8 @@ class Track {
      * may want to add startbeat as an instance variable or something and then have a setter function
      * @param {Number} beat The beat of the song to start at
      */
-    play(beat) {
-        var startNote;
+    play(beat: number) {
+        let startNote: number;
         if (beat != undefined) {
             startNote = this.findBeatIndex(beat);
             if (startNote == this.notes.length) {
@@ -104,7 +126,7 @@ class Track {
         this.playWithBackend(startNote, beat);
     }
 
-    playWithBackend(startNote, beat) {
+    playWithBackend(startNote: number, beat: number) {
         switch (this.backend) {
         case 'webaudio':
             this.playWithWebAudio(startNote, beat);
@@ -115,25 +137,25 @@ class Track {
         }
     }
 
-    playWithWebAudio(startNote, beat) {
+    playWithWebAudio(startNote: number, beat: number) {
         /* Web Audio 用のスケジューラ */
-        let callback = function (e) {
+        let callback = (e: any) => {
             let beatTime = 60.0 / this.song.tempo;
             const delay = 0.1;
             for (var i = startNote; i < this.notes.length; i++) {
                 this.sched.insert(e.playbackTime + delay + beatTime * (this.notes[i].beat - beat), this.playNote.bind(this, this.notes[i].noteNumber, this.notes[i].beat, this.notes[i].duration, this.notes[i].volume));
             }
-        }.bind(this);
+        };
         this.sched.start(callback);
     }
 
-    playWithWebMidi(startNote, beat) {
+    playWithWebMidi(startNote: number, beat: number) {
         /* Web MIDI 用のスケジューラ */
-        const scheduledNotes = []; // ノートがスケジューリングされたか否か
+        const scheduledNotes: boolean[] = []; // ノートがスケジューリングされたか否か
         for (let i=0; i<this.notes.length; i++) {
             scheduledNotes.push(false);
         }
-        const callback = function (proxy) {
+        const callback = (proxy: WebMIDISchedulerProxy) => {
             const beatTime = 60.0 / this.song.tempo;
             const requestedDuration = proxy.requestDuration;
             const playbackTime = proxy.playbackTime;
@@ -156,7 +178,8 @@ class Track {
                 // MIDI チャンネル
                 const ch = this.trackNumber;
                 // MIDI イベント
-                const nn = this.mapMidiNoteNumber(null, this.notes[i].noteNumber);
+                //const nn = this.mapMidiNoteNumber(null, this.notes[i].noteNumber);
+                const nn = this.notes[i].noteNumber;
                 const noteOn = [0x90 | ch, nn, this.notes[i].volume];
                 const noteOff = [0x80 | ch, nn, 0];
                 // スケジューリング
@@ -165,12 +188,12 @@ class Track {
                 // スケジューリングされたとしてフラグをつける
                 scheduledNotes[i] = true;
             }
-        }.bind(this);
+        };
         this.midiProgramChangeIfNeeded();
         this.mSched.start(callback);
     }
 
-    playNote(noteNumber, beat, duration, volume, midiNoteNumber) {
+    playNote(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
         this.playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber);
     }
 
@@ -181,18 +204,18 @@ class Track {
      * @param {Number} duration
      * @param {Number} volume
      */
-    playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber) {
+    playNoteWithWebAudio(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
         let note = new Note(noteNumber, beat, duration, volume);
         let beatTime = 60.0 / this.song.tempo;
         this.instrument.play(this, note.noteNumber, note.duration * beatTime, note.volume);
         // noteToPlay.connect(this.audiolet.output);   
     }
 
-    playNoteWithWebMidi(noteNumber, beat, duration, volume, midiNoteNumber) {
+    playNoteWithWebMidi(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
         this.playMidiNote(midiNoteNumber, duration, volume, noteNumber);
     }
 
-    playMidiNote(noteNumber, duration, volume, freq) {
+    playMidiNote(noteNumber: number, duration: number, volume: number, freq: number) {
         this.midiProgramChangeIfNeeded();
         const ch = this.trackNumber;
         const velocity = Math.floor(100*volume);
@@ -203,11 +226,8 @@ class Track {
         this.mSched.scheduleNowWithDelay(noteOff, duration*1000);
     }
 
-    mapMidiNoteNumber(freq, noteNumber) {
+    mapMidiNoteNumber(freq: number, noteNumber: number) {
         const inst = this.instrument;
-        if (inst.mapNote) {
-            return inst.mapNote(freq, noteNumber);
-        }
         return noteNumber;
     }
 
@@ -215,7 +235,7 @@ class Track {
      * Get the index where the Beat should be
      * @param {Number} beat The beat
      */
-    findBeatIndex(beat) {
+    findBeatIndex(beat: number): number {
         var i;
         for (i = 0; i < this.notes.length; i++) {
             if (beat <= this.notes[i].beat) {
@@ -226,8 +246,8 @@ class Track {
     }
 
 
-    getJSONObject(){
-        let jsonobj = {
+    getJSONObject(): TrackJSON {
+        let jsonobj: TrackJSON = {
             instrument: this.instrument.name, //楽器を追加した場合のためにIDでなくNameを用いる
             volume: this.volume,
             notes: [],
@@ -238,11 +258,11 @@ class Track {
         return jsonobj;
     }
 
-    loadJSON(json){
+    loadJSON(json: string) {
         this.loadJSONObject(JSON.parse(json));
     }
 
-    loadJSONObject(jobj){
+    loadJSONObject(jobj: TrackJSON) {
         this.instrumentID = instrumentNameToID[jobj.instrument];
         this.instrument = instrumentArray[this.instrumentID];
         this.setVolume(jobj.volume);
@@ -253,7 +273,7 @@ class Track {
         }
     }
 
-    loadNoteJSONObject(jobj){
+    loadNoteJSONObject(jobj: NoteJSON) {
         let note = new Note(0, 0, 0, 0);
         note.noteNumber = jobj.noteNumber;
         note.beat = jobj.beat;
@@ -262,7 +282,7 @@ class Track {
         return note;
     }
 
-    setVolume(volume){
+    setVolume(volume: number) {
         this.volume = volume;
         this.gainNode.gain.value = volume / 127.0;
     }
@@ -274,6 +294,10 @@ class Track {
             this.trackNumber = 9;
         } else {
             const pc = this.instrument.programChange;
+            if (pc == null) {
+                console.warn("pc is null");
+                return;
+            }
             const data = [0xc0 | this.trackNumber, pc];
             this.mSched.scheduleNow(data);
         }
@@ -284,6 +308,12 @@ class Track {
     }
 }
 
+type TrackJSON = {
+    instrument: string,
+    volume: number,
+    notes: NoteJSON[]
+};
+
 
 /**
  * A note consists of a frequency, a beat, and a duration
@@ -291,17 +321,22 @@ class Track {
  * @param {Number} beat 
  * @param {Number} duration
  */
-class Note {
-    constructor(noteNumber, beat, duration, volume) {
+export class Note {
+    noteNumber: number;
+    beat: number;
+    duration: number;
+    volume: number;
+
+    constructor(noteNumber: number, beat: number, duration: number, volume: number) {
         this.noteNumber = noteNumber;
         this.beat = beat;
         this.duration = duration;
         this.volume = volume;
     }
-    toString() {
+    toString(): string {
         return "beat: " + this.beat + " duration: " + this.duration;
     }
-    getJSONObject(){
+    getJSONObject(): NoteJSON {
         return {
             noteNumber: this.noteNumber,
             beat: this.beat,
@@ -311,4 +346,9 @@ class Note {
     }
 }
 
-
+type NoteJSON = {
+    noteNumber: number,
+    beat: number,
+    duration: number,
+    velocity: number
+};

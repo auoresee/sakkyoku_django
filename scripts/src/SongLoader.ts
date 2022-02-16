@@ -1,7 +1,10 @@
+import { sequencer } from "./SequencerInit";
+import { Song } from "./Song";
+
 const DOWNLOAD_URL = "api/songs/";
 
 class SongLoader {
-    requestSong(song_id){
+    requestSong(song_id: number) {
         $.ajax(
             {
                 url: DOWNLOAD_URL + song_id,
@@ -10,12 +13,12 @@ class SongLoader {
                 data: "",
                 cache: false,
                 error:function(){},
-                complete:this.processResponse.bind(this),
+                complete: (res) => this.processResponse(res)
             }
         );
     }
 
-    processResponse(response){
+    processResponse(response: JQuery.jqXHR<any>) {
         let res = response.responseText;
 
         if(res.charAt(0) == "!"){   //error
@@ -29,7 +32,12 @@ class SongLoader {
 
         let json = JSON.parse(res);
 
-        sequencer.userID = json.userID;
+        if (sequencer == null) {
+            console.warn("sequencer is null");
+            return;
+        }
+
+        (sequencer as any).userID = json.userID; // TODO
         sequencer.setMode(json.isMySong);
 
         let song = new Song();
@@ -38,4 +46,4 @@ class SongLoader {
     }
 }
 
-var songLoader = new SongLoader();
+export const songLoader = new SongLoader();
