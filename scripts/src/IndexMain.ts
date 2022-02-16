@@ -1,3 +1,5 @@
+import $ from 'jquery';
+
 //const SONGLIST_REQUEST_URL = "php/songlistmanager.php";
 const SONGLIST_REQUEST_URL = "api/songs/";
 
