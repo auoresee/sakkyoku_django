@@ -3,13 +3,14 @@ import { Sequencer } from "./Sequencer";
 import { Song } from "./Song";
 import { audioCtx, isWebaudioContextResumed, setIsWebaudioContextResumed } from "./SoundManager";
 import { Track } from "./Track";
+import { Grid, Piano } from "./ui";
 
 const DEFAULT_STATUS_MESSAGE_DURATION_MS = 3000;
 
 export class Controls {
     private sequencer: Sequencer;
-    private piano;
-    private grid;
+    private piano: Piano;
+    private grid: Grid;
     private playButton: HTMLButtonElement;
     private tempoButton: HTMLInputElement;
     private saveButton: HTMLButtonElement;
@@ -18,15 +19,15 @@ export class Controls {
     private noteLengthsElements: HTMLCollection;
     private noteLengths: number[];
     private tracks: string[];
-    private tracksElement: HTMLSelectElement;
-    private instrumentsElement: HTMLSelectElement;
+    tracksElement: HTMLSelectElement;
+    instrumentsElement: HTMLSelectElement;
     private trackVolumeSlider: HTMLInputElement;
     private notePointCheckbox: HTMLInputElement;
     private lengthWithoutPoint: number;
     private clearElement: HTMLButtonElement;
     private lastMessageID: number     //used to manage status message
 
-    constructor(song: Song, piano: any, grid: any, sequencer: Sequencer) {
+    constructor(song: Song, piano: Piano, grid: Grid, sequencer: Sequencer) {
         this.sequencer = sequencer;
         this.piano = piano;
         this.grid = grid;

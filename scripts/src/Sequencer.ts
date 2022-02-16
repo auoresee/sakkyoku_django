@@ -1,7 +1,8 @@
 import { Controls } from "./Controls";
-import { InstrumentInfo, instrumentList, instrumentNameToID } from "./instruments";
+import { instrumentArray, InstrumentInfo, instrumentList, instrumentNameToID } from "./instruments";
 import { Song } from "./Song";
-import { Track } from "./Track";
+import { Note, Track } from "./Track";
+import { Grid, Piano } from "./ui";
 
 const DEFAULT_TRACK_NUM = 8;
 const UPLOAD_URL = "/api/songs/save";
@@ -12,9 +13,9 @@ export class Sequencer {
         [key: string]: InstrumentInfo;
     };
     private tracks: Track[];
-    private trackNames;
-    private pianos;
-    private grids;
+    private trackNames: string[];
+    private pianos: Piano[];
+    private grids: Grid[];
     private index: number;
 
     private isWriteMode: boolean;
@@ -34,7 +35,7 @@ export class Sequencer {
         this.isWriteMode = true;
 
         //menu   
-        this.controls = new Controls(this.song, this.piano, grid, this);
+        this.controls = new Controls(this.song, null as any, null as any, this); // TODO: ?
         this.controls.addListeners();
 
         let saveExist = this.restoreLocalSavedJSON();
@@ -82,7 +83,7 @@ export class Sequencer {
         this.controls.addTrack(this.trackNames[i]);
     }
 
-    drawMain(track, savedNotes) {
+    drawMain(track: Track, savedNotes: Note[]) {
         this.index = this.tracks.indexOf(track);
         this.pianos[this.index].drawPiano('c', 7, 60);
         this.grids[this.index].drawGrid(100, 1, this.pianos[this.index], savedNotes);
@@ -101,7 +102,7 @@ export class Sequencer {
         return result;
     }
 
-    restoreSavedJSON(json){
+    restoreSavedJSON(json: string | null | undefined) {
         if(json == null || json == undefined) return false;
         
         //this.song.changeTempo(parseInt(tempo, 10));
@@ -112,7 +113,7 @@ export class Sequencer {
         return true;
     }
 
-    setMode(is_write_mode){
+    setMode(is_write_mode: boolean){
         if(is_write_mode == this.isWriteMode) return;
 
         this.isWriteMode = is_write_mode;
@@ -126,7 +127,7 @@ export class Sequencer {
         }
     }
 
-    setSong(song){
+    setSong(song: Song) {
         this.song = song;
         this.tracks = this.song.tracks;
         this.trackNames = [];
@@ -135,7 +136,7 @@ export class Sequencer {
         this.index = 0;
 
         let tempo = song.tempo;
-        document.getElementById('tempo').value = tempo;
+        (document.getElementById('tempo') as HTMLInputElement).value = tempo as unknown as string;
 
         this.controls.clearAllTrackFromSelector();
 
@@ -154,7 +155,7 @@ export class Sequencer {
             this.drawMain(this.tracks[i], this.tracks[i].notes);
         }
 
-        this.drawMain(this.tracks[0]);
+        this.drawMain(this.tracks[0], []);
     }
 
     uploadSong(){
@@ -184,7 +185,7 @@ export class Sequencer {
         );
     }
 
-    processUploadResponse(response){
+    processUploadResponse(response: { responseText: any; }){
         let res = response.responseText;
 
         console.debug(res);
@@ -211,7 +212,7 @@ export class Sequencer {
         }
     }
 
-    processImportResponse(response){
+    processImportResponse(response: JQuery.jqXHR<any>){
         let res = response.responseText;
 
         console.debug(res);
@@ -254,7 +255,7 @@ export class Sequencer {
         let track = this.tracks[trackID];
         this.controls.instrumentsElement.selectedIndex = track.instrumentID;
         this.controls.setTrackVolumeSliderValue(track.volume);
-        this.drawMain(this.tracks[trackID]);
+        this.drawMain(this.tracks[trackID], []);
         console.debug(this.song.getJSON())
     }
 
@@ -263,7 +264,7 @@ export class Sequencer {
     }
 
     //change instrument of a track
-    changeTrackInstrument(trackID, instrumentID) {
+    changeTrackInstrument(trackID: number, instrumentID: number) {
         let track = this.tracks[trackID];
         let new_instr = instrumentArray[instrumentID];
         track.instrument = new_instr;
@@ -275,7 +276,7 @@ export class Sequencer {
     }
 
     //change instrument of the current track
-    changeCurrentTrackInstrument(instrumentID) {
+    changeCurrentTrackInstrument(instrumentID: number) {
         this.changeTrackInstrument(this.index, instrumentID);
     }
 
@@ -284,7 +285,7 @@ export class Sequencer {
         for(let i = 0; i < track.notes.length; i++){
             track.notes[i].noteNumber += num
         }
-        this.drawMain(this.tracks[this.index]);
+        this.drawMain(this.tracks[this.index], []);
     }
 }
 

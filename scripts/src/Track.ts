@@ -28,14 +28,14 @@ export class Track {
     private mSched: WebMIDIScheduler;
     gainNode: GainNode
     notes: Note[];
-    private instrumentID: number
-    private instrument: InstrumentInfo
+    instrumentID: number
+    instrument: InstrumentInfo
     private trackNumber: number
     // Program Change イベントを送信したか? (Web MIDIのみ)
     private programChanged = false;
     // response to backend change
     private backend: "webaudio" | "webmidi";
-    private volume: number = 90;
+    volume: number = 90;
 
     constructor(instrumentID: number, song: Song, trackNumber: number) {
         this.song = song;

@@ -8,11 +8,11 @@ export class Song {
     tempo: number;
     tracks: Track[];
     songID: number; //0 if not saved in the server
-    private userID: number;
-    private isOnRelease: boolean; //whether this song is accessible by the public
+    userID: number;
+    isOnRelease: boolean; //whether this song is accessible by the public
     private createdDate: number;
     private releasedDate: number;
-    private lastUpdatedDate: number;
+    lastUpdatedDate: number;
 
     constructor() {
         this.name = "New Song";
