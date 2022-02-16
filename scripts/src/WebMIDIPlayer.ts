@@ -25,9 +25,10 @@ class WebMIDIPlayer {
                 const outs = this.listOutputPorts();
                 let name = null;
                 outs.forEach(o => {
-                    if (name == null) {
+                    console.log(o);
+                    // if (name == null) {
                         name = o.id;
-                    };
+                    // };
                 });
                 this.setOutputPort(name);
             },
