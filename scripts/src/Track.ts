@@ -15,7 +15,7 @@ try {
 // .value is either "webaudio" or "webmidi"
 const backendSelector = document.querySelector('#backendSelector');
 
-class Track {
+export class Track {
     constructor(instrumentID, song, trackNumber) {
         this.song = song;
         this.sched = new WebAudioScheduler({ context: audioCtx });
