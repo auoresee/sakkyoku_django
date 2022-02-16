@@ -1,3 +1,4 @@
+import { processQuery, queryObject } from "./QueryProcessor";
 import { Sequencer } from "./Sequencer";
 import { songLoader } from "./SongLoader";
 import { initialize } from "./ui";

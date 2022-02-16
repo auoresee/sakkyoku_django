@@ -1,1 +1,1 @@
-import * as init from './SequencerInit';
+require('./SequencerInit');
