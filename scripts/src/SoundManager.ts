@@ -1,4 +1,7 @@
 'use strict';
+
+import { loadSoundFiles } from "./instruments";
+
 export let audioCtx: AudioContext;
 
 const audioInitEventName = typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
@@ -34,11 +37,13 @@ window.addEventListener("load", function(e){
 });
 
 class SoundManager {
+    private audioBuffers: { [key: string]: AudioBuffer };
+
     constructor(){
-        this.audioBuffers = [];
+        this.audioBuffers = {};
     }
 
-    loadSound(name, url) {
+    loadSound(name: string | number, url: string) {
         var request = new XMLHttpRequest();
         request.open('GET', "/static/sakkyokuapp/"+url, true);
         request.responseType = 'arraybuffer';
@@ -54,7 +59,7 @@ class SoundManager {
         request.send();
     }
 
-    playSound(name, isLoop) {
+    playSound(name: string | number, isLoop: boolean) {
         if(!this.audioBuffers[name]){
             return;
         }
@@ -67,7 +72,7 @@ class SoundManager {
 
     //pitch: frequency multiplier (1: normal, 2: 1 octave up)
     //duration: second
-    playSoundPitch(name, isLoop, pitch, duration, parentNode) {
+    playSoundPitch(name: string | number, isLoop: boolean, pitch: number, duration: number, parentNode: AudioNode) {
         if(!this.audioBuffers[name]){
             return;
         }
@@ -82,4 +87,4 @@ class SoundManager {
 
 }
 
-var soundManager = new SoundManager();
+export const soundManager = new SoundManager();

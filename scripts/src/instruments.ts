@@ -1,3 +1,4 @@
+import { soundManager } from './SoundManager';
 import { Track } from './Track';
 
 export type InstrumentInfo = {
@@ -186,7 +187,7 @@ function calculateFrequency(noteNumber: number): number {
     return result;
 }
 
-function loadSoundFiles(){
+export function loadSoundFiles(){
     soundManager.loadSound("piano_A4", "sound/piano_A4.wav");
     soundManager.loadSound("RockOrgan_A4", "sound/RockOrgan_A4.wav");
     soundManager.loadSound("SopranoSax_A4", "sound/SopranoSax_A4.wav");
