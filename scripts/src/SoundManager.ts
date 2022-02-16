@@ -1,5 +1,5 @@
 'use strict';
-var audioCtx;
+export let audioCtx: AudioContext;
 
 const audioInitEventName = typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
 document.addEventListener(audioInitEventName, initAudioContext);

@@ -1,18 +1,14 @@
 import { Track } from './Track';
 
-type FakeTrack = {
-    gainNode: any
-};
-
-type InstrumentInfo = {
+export type InstrumentInfo = {
     name: string,
     displayName: string,
-    play: (track: FakeTrack, noteNumber: number, duration: number, volume: number) => void,
+    play: (track: Track, noteNumber: number, duration: number, volume: number) => void,
     programChange: number | null,
     isDrum?: boolean
 }
 
-var instrumentArray: InstrumentInfo[] = [      
+export const instrumentArray: InstrumentInfo[] = [      
     {
         name: "Piano",
         displayName: "ピアノ",
@@ -167,8 +163,8 @@ var instrumentArray: InstrumentInfo[] = [
     },
 ];
 
-const instrumentList: InstrumentInfo[] = [];
-const instrumentNameToID: { [key: string]: number } = {};
+const instrumentList: { [key: string]: InstrumentInfo } = {};
+export const instrumentNameToID: { [key: string]: number } = {};
 for (let i = 0; i < instrumentArray.length; i++){
     let instr = instrumentArray[i];
     instrumentList[instr.name] = instr;

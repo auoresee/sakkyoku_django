@@ -5,7 +5,7 @@
         WebMIDIPlayer: handles actual playback of midi events (using high precision timer)
 */
 
-class WebMIDIPlayer {
+export class WebMIDIPlayer {
     private midi: WebMidi.MIDIAccess | null;
     private outputId: string;
 
@@ -85,7 +85,7 @@ class WebMIDIPlayer {
 }
 
 
-class WebMIDIScheduler {
+export class WebMIDIScheduler {
     private player: WebMIDIPlayer;
     interval: number
     private callback;
@@ -148,14 +148,14 @@ class WebMIDIScheduler {
 }
 
 
-class WebMIDISchedulerProxy {
+export class WebMIDISchedulerProxy {
     private _scheduler: WebMIDIScheduler
     _entries: {
         data: number[],
         delayMillis: number
     }[];
-    private requestDuration: number;
-    private playbackTime: number;
+    requestDuration: number;
+    playbackTime: number;
 
     constructor(scheduler) {
         this._scheduler = scheduler;
