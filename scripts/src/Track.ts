@@ -6,6 +6,8 @@
 import { Song } from "./Song";
 import { InstrumentInfo, instrumentArray, instrumentNameToID } from "./instruments";
 import { WebMIDISchedulerProxy, WebMIDIPlayer, WebMIDIScheduler } from "./WebMIDIPlayer";
+import { audioCtx, masterGainNode } from "./SoundManager";
+import WebAudioScheduler from './web-audio-scheduler';
 
 const gWebMidiPlayer = new WebMIDIPlayer();
 let gWebMidiIsReady = false;
@@ -37,6 +39,7 @@ export class Track {
 
     constructor(instrumentID: number, song: Song, trackNumber: number) {
         this.song = song;
+        // @ts-ignore
         this.sched = new WebAudioScheduler({ context: audioCtx });
         this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.gainNode = audioCtx.createGain();
@@ -175,7 +178,8 @@ export class Track {
                 // MIDI チャンネル
                 const ch = this.trackNumber;
                 // MIDI イベント
-                const nn = this.mapMidiNoteNumber(null, this.notes[i].noteNumber);
+                //const nn = this.mapMidiNoteNumber(null, this.notes[i].noteNumber);
+                const nn = this.notes[i].noteNumber;
                 const noteOn = [0x90 | ch, nn, this.notes[i].volume];
                 const noteOff = [0x80 | ch, nn, 0];
                 // スケジューリング

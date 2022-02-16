@@ -7,7 +7,7 @@ export class Song {
     name: string;
     tempo: number;
     tracks: Track[];
-    private songID: number; //0 if not saved in the server
+    songID: number; //0 if not saved in the server
     private userID: number;
     private isOnRelease: boolean; //whether this song is accessible by the public
     private createdDate: number;

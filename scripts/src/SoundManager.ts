@@ -17,7 +17,7 @@ function initAudioContext(){
     isWebaudioContextResumed = true;
 }
 
-var masterGainNode;
+export let masterGainNode: GainNode;
 
 window.addEventListener("load", function(e){
     try {
