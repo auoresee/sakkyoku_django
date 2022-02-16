@@ -163,7 +163,7 @@ export class Sequencer {
             return;
         }
 
-        var csrf_token = getCookie("csrftoken");
+        const csrf_token = getCookie("csrftoken") as string;
 
         this.save();
 
@@ -279,7 +279,7 @@ export class Sequencer {
         this.changeTrackInstrument(this.index, instrumentID);
     }
 
-    transposeCurrentTrack(num){
+    transposeCurrentTrack(num: number){
         let track = this.tracks[this.index];
         for(let i = 0; i < track.notes.length; i++){
             track.notes[i].noteNumber += num
@@ -289,7 +289,7 @@ export class Sequencer {
 }
 
 // csrf_tokenの取得に使う
-function getCookie(name) {
+export function getCookie(name: string | any[]) {
     var cookieValue = null;
     if (document.cookie && document.cookie !== '') {
         var cookies = document.cookie.split(';');

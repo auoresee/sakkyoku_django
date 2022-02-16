@@ -321,7 +321,7 @@ type TrackJSON = {
  * @param {Number} beat 
  * @param {Number} duration
  */
-class Note {
+export class Note {
     noteNumber: number;
     beat: number;
     duration: number;

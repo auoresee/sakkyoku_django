@@ -1,33 +1,59 @@
+import { getCookie } from "./Sequencer";
+import { sequencer } from "./SequencerInit";
+import { Note, Track } from "./Track";
 
 /**
  * Piano Part of the Piano roll
  */
-class Piano {
-    constructor(sharpHeight, adgHeight, bcefHeight, track) {
+export class Piano {
+    track: Track;
+    blackfillStyle: string;
+    whitefillStyle: string;
+    strokeStyle: string;
+    whiteWidth: number;
+    whiteCanvas: HTMLCanvasElement;
+    blackCanvas: HTMLCanvasElement;
+    whiteContext: CanvasRenderingContext2D;
+    blackContext: CanvasRenderingContext2D;
+    keys: PianoKey[];
+    sharpHeight: number;
+    adgHeight: number;
+    bcefHeight: number;
+    blackOffset: number;
+    octaveHeight: number;
+    piano: HTMLDivElement;
+    container: HTMLDivElement;
+    blackKeyLookup: number[];
+    whiteKeyLookup: number[];
+    pastKey: null | PianoKey;
+    height: number | undefined;
+    static whiteWidth: number;
+
+    constructor(sharpHeight: number, adgHeight: number, bcefHeight: number, track: Track) {
         this.track = track;
         this.blackfillStyle = "#aae3ab";
         this.whitefillStyle = "#ddf4fc";
         this.strokeStyle = "#FA6";
         this.whiteWidth = 50;
         Piano.whiteWidth = this.whiteWidth;
-        this.whiteCanvas = document.getElementById('white-keys');
-        this.blackCanvas = document.getElementById('black-keys');
-        this.whiteContext = this.whiteCanvas.getContext("2d");
-        this.blackContext = this.blackCanvas.getContext("2d");
+        this.whiteCanvas = document.getElementById('white-keys') as HTMLCanvasElement;
+        this.blackCanvas = document.getElementById('black-keys') as HTMLCanvasElement;
+        this.whiteContext = this.whiteCanvas.getContext("2d") as any;
+        this.blackContext = this.blackCanvas.getContext("2d") as any;
         this.keys = [];
         this.sharpHeight = sharpHeight;
         this.adgHeight = adgHeight;
         this.bcefHeight = bcefHeight;
         this.blackOffset = sharpHeight / 2;
         this.octaveHeight = 3 * this.adgHeight + 4 * this.bcefHeight; //The height of an entire octave is 7 x the height of a white key
-        this.piano = document.getElementById('piano');
-        this.container = document.getElementById('piano-container');
+        this.piano = document.getElementById('piano') as any;
+        this.container = document.getElementById('piano-container') as any;
         this.blackKeyLookup = [];
         this.whiteKeyLookup = [];
         this.pastKey = null;
     }
 
-    drawNote(key, highlight) {
+    drawNote(key: PianoKey | null | undefined, highlight: boolean) {
         if (key == undefined) {
             return;
         }
@@ -49,7 +75,7 @@ class Piano {
         }
     }
 
-    drawPiano(startKey, startOctave, numKeys) {
+    drawPiano(startKey: string, startOctave: number, numKeys: number) {
         this.height = 0;
         var notes = ['g#', 'g', 'f#', 'f', 'e', 'd#', 'd', 'c#', 'c', 'b', 'a#', 'a'];
         var mappings = [8, 7, 6, 5, 4, 3, 2, 1, 0, 11, 10, 9];
@@ -122,14 +148,14 @@ class Piano {
                 this.keys[i].draw(this.whiteContext);
             }
         }
-        this.piano.onmousedown = (function (e) {
+        this.piano.onmousedown = (e) => {
             var x = e.pageX - this.piano.offsetLeft;
             var y = e.pageY - this.piano.offsetTop + this.container.scrollTop;
             var key = this.getKey(x, y);
             this.playNote(key);
-        }).bind(this);
+        };
 
-        this.piano.onmousemove = (function (e) {
+        this.piano.onmousemove = (e) => {
             var x = e.pageX - this.piano.offsetLeft;
             var y = e.pageY - this.piano.offsetTop + this.container.scrollTop;
             var key = this.getKey(x, y);
@@ -140,11 +166,11 @@ class Piano {
                 }
                 this.pastKey = key;
             }
-        }).bind(this);
+        };
 
-        this.piano.onmouseout = (function () {
+        this.piano.onmouseout = () => {
             this.drawNote(this.pastKey, false);
-        }).bind(this);
+        };
 
     }
 
@@ -152,14 +178,14 @@ class Piano {
         return this.keys[this.keys.length - 1].y + this.keys[this.keys.length - 1].height;
     }
 
-    playNote(key) {
+    playNote(key: PianoKey | null | undefined) {
         if (key == undefined || key == null) {
             return;
         }
         this.track.playNote(key.frequency, 0, 1, 1, key.midiNoteNumber);
     }
 
-    getKey(x, y) {
+    getKey(x: number, y: number) {
         var relativeYOffset = y % this.octaveHeight;
         var octaveOffset = 12 * Math.floor(y / this.octaveHeight);
         if (x > Piano.whiteWidth / 2) {
@@ -176,7 +202,17 @@ class Piano {
 
 
 class PianoKey {
-    constructor(y, height, note, octave, frequency, midiNoteNumber) {
+    fillStyle: string;
+    midiNoteNumber: number;
+    note: string;
+    black: boolean;
+    y: number;
+    height: number;
+    octave: number;
+    width: number;
+    frequency: number;
+    
+    constructor(y: number, height: number, note: string, octave: number, frequency: number, midiNoteNumber: number) {
         this.octave = octave;
         this.frequency = frequency || 440;
         this.y = y;
@@ -194,7 +230,7 @@ class PianoKey {
             this.fillStyle = '#FFF';
         }
     }
-    draw(context, fillStyle, strokeStyle) {
+    draw(context: CanvasRenderingContext2D, fillStyle?: string, strokeStyle?: string) {
         context.fillStyle = fillStyle || this.fillStyle;
         context.strokeStyle = strokeStyle || '#000';
         context.lineWidth = 0;
@@ -212,15 +248,46 @@ class PianoKey {
 
 const noteNumberOffset = 96;
 
-class Grid {
+export class Grid {
+    beatsPerMeter: number;
+    canvas: HTMLCanvasElement;
+    noteCanvas: HTMLCanvasElement;
+    context: CanvasRenderingContext2D;
+    noteContext: CanvasRenderingContext2D;
+    grid: HTMLElement;
+    container: HTMLElement;
+    drawnNotes: never[];
+    currentNoteDuration: number;
+    currentNoteVelocity: number;
+    smallestBeatIncrement: number;
+    currentSmallestBeatIncrement: number;
+    startY: number;
+    pastKey: any;
+    measureCounter: HTMLCanvasElement;
+    measureCounterContext: CanvasRenderingContext2D;
+    noteXLookup: DrawnNote[][];
+    grabbingNote: null | {
+        clickedPosition: 'left' | 'right' | 'center',
+        note: DrawnNote
+    };
+    piano: any;
+    keyHeight: number = 0;
+    keys: any;
+    width: any;
+    height: any;
+    cellWidth: number = 0;
+    cellBeatLength: any;
+    smallestPixelBeatIncrement: number = 0;
+    currentSmallestPixelBeatIncrement: number = 0;
+    last_cursor: string = '';
     constructor() {
         this.beatsPerMeter = 4;
-        this.canvas = document.getElementById('canvas-grid');
-        this.noteCanvas = document.getElementById('canvas-notes');
-        this.context = this.canvas.getContext("2d");
-        this.noteContext = this.noteCanvas.getContext("2d");
-        this.grid = document.getElementById('grid');
-        this.container = document.getElementById('grid-container');
+        this.canvas = document.getElementById('canvas-grid') as any;
+        this.noteCanvas = document.getElementById('canvas-notes') as any;
+        this.context = this.canvas.getContext("2d") as any;
+        this.noteContext = this.noteCanvas.getContext("2d") as any;
+        this.grid = document.getElementById('grid') as any;
+        this.container = document.getElementById('grid-container') as any;
         this.drawnNotes = [];
         this.currentNoteDuration = 1;
         this.currentNoteVelocity = 90;
@@ -228,17 +295,17 @@ class Grid {
         this.currentSmallestBeatIncrement = 0.25;
         this.startY = 0;
         this.pastKey;
-        this.measureCounter = document.getElementById("measure-counter-canvas");
-        this.measureCounterContext = this.measureCounter.getContext("2d");
+        this.measureCounter = document.getElementById("measure-counter-canvas") as any;
+        this.measureCounterContext = this.measureCounter.getContext("2d") as any;
         this.noteXLookup = [];
         this.grabbingNote = null; // null || {note, clickedPosition}
     }
-    drawGrid(cellWidth, cellBeatLength, piano, notes) {
+    drawGrid(cellWidth: any, cellBeatLength: number, piano: Piano, notes: Note[]) {
         this.piano = piano;
         this.keyHeight = this.piano.blackOffset * 2;
         this.keys = piano.keys;
-        this.canvas.height = piano.height;
-        this.noteCanvas.height = piano.height;
+        this.canvas.height = piano.height as number;
+        this.noteCanvas.height = piano.height as number;
         this.grid.style.height = piano.height + "px";
         this.width = this.canvas.width;
         this.height = this.canvas.height;
@@ -286,7 +353,7 @@ class Grid {
         for (var i = 0; i < numCells; i++) {
             if (i % cellsInMeasure == 0) {
                 this.context.strokeStyle = '#000';
-                this.measureCounterContext.fillText((i / 4) + 1, Piano.whiteWidth + i * this.cellWidth + this.cellWidth / 4, 12);
+                this.measureCounterContext.fillText(((i / 4) + 1).toString(), Piano.whiteWidth + i * this.cellWidth + this.cellWidth / 4, 12);
             }
             else {
                 this.context.strokeStyle = '#6E6E6E';
@@ -312,7 +379,7 @@ class Grid {
                 //console.log(notes[i]);
             }
         }
-        this.grid.onmousemove = (function (e) {
+        this.grid.onmousemove = (e) => {
             var x = e.pageX - this.grid.offsetLeft + this.container.scrollLeft;
             var y = e.pageY - this.grid.offsetTop + this.container.scrollTop;
             var key = this.keys[this.getKeyIndex(x, y)];
@@ -327,31 +394,31 @@ class Grid {
                 this.pastKey = key;
             }
             this.processMouseOver(x, y);
-        }).bind(this);
+        };
 
-        this.grid.onmousedown = (function (e) {
+        this.grid.onmousedown = (e) => {
             var x = e.pageX - this.grid.offsetLeft + this.container.scrollLeft;
             var y = e.pageY - this.grid.offsetTop + this.container.scrollTop;
             this.processClick(x, y, true, e.button);
-        }).bind(this);
+        };
 
-        this.grid.onmouseup = (function (e) {
+        this.grid.onmouseup = (e) => {
             var x = e.pageX - this.grid.offsetLeft + this.container.scrollLeft;
             var y = e.pageY - this.grid.offsetTop + this.container.scrollTop;
             this.processMouseUp(x, y);
-        }).bind(this);
+        };
 
-        this.grid.onmouseout = (function () {
+        this.grid.onmouseout = () => {
             this.piano.drawNote(this.pastKey, false);
-        }).bind(this);
+        };
 
         // disable right click menu
-        this.grid.oncontextmenu = (function (e) {
+        this.grid.oncontextmenu = (e) => {
             e.preventDefault();
             return false;
-        })
+        };
     }
-    getKeyIndex(x, y) {
+    getKeyIndex(x: number, y: number) {
         var keyIndex = Math.floor((y - this.startY) / this.keyHeight);
         return keyIndex;
     }
@@ -361,12 +428,12 @@ class Grid {
         }
         this.drawNotes();
     }
-    drawNote(x, y, height, width) {
+    drawNote(x: number, y: number, height: number, width: number) {
         this.noteContext.fillStyle = '#F00';
         this.noteContext.fillRect(x, y, height, width);
         this.noteContext.strokeRect(x, y, height, width);
     }
-    findExistNote(x, y) {
+    findExistNote(x: number, y: number): [false | DrawnNote, null | 'right' | 'left' | 'center'] {
         var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
         var notePixelLength = this.currentNoteDuration / this.cellBeatLength * this.cellWidth;
         var cellLocationOffset = Math.floor(x % this.cellWidth / (this.smallestBeatIncrement * this.cellWidth / this.cellBeatLength)) * this.smallestPixelBeatIncrement;
@@ -374,7 +441,7 @@ class Grid {
         var visualKeyIndex = Math.floor((y - this.startY) / this.keyHeight);
         var keyIndex = - Math.floor((y - this.startY) / this.keyHeight) + noteNumberOffset;
         if (keyIndex < 0) {
-            return;
+            throw new Error('unknown error');
         }
         var yPosition = this.startY + visualKeyIndex * this.keyHeight;
 
@@ -394,9 +461,9 @@ class Grid {
             }
         }
 
-        return [noteToDelete, clickedPosition];
+        return [noteToDelete, clickedPosition as any];
     }
-    edgeCheck(noteToCompare, startIndex, indexStep, indexIter) {
+    edgeCheck(noteToCompare: DrawnNote, startIndex: number, indexStep: number, indexIter: number) {
         let index = startIndex;
         for (let i=0; i<indexIter; i++) {
             index += indexStep;
@@ -406,21 +473,25 @@ class Grid {
         }
         return false;
     }
-    processMouseUp(x, y) {
+    processMouseUp(x: number, y: number) {
         this.grabbingNote = null;
     }
-    processMouseOver(x, y) {
+    processMouseOver(x: number, y: number) {
         if (this.grabbingNote === null) {
             this.processFreeMouseOver(x, y);
         } else {
             this.processGrabbingNoteMove(x, y);
         }
     }
-    processGrabbingNoteMove(x, y) {
+    processGrabbingNoteMove(x: number, y: number) {
         // quantized x
         const qx = Math.floor(x/this.currentSmallestPixelBeatIncrement) * this.currentSmallestPixelBeatIncrement;
         // delete the note from noteXLookup and track,
         // then add the note with modified start and length
+        if (this.grabbingNote == null) {
+            console.warn('grabbingNote is null');
+            return;
+        }
         switch (this.grabbingNote.clickedPosition) {
         case 'center':
             console.log("unreachable");
@@ -448,33 +519,33 @@ class Grid {
             break;
         }
     }
-    calculateNoteIndexRange(note) {
+    calculateNoteIndexRange(note: DrawnNote) {
         return [note.x/this.smallestPixelBeatIncrement, (note.x+note.length)/this.smallestPixelBeatIncrement];
     }
-    deleteNoteIndices(note) {
+    deleteNoteIndices(note: DrawnNote) {
         const [start, end] = this.calculateNoteIndexRange(note);
         for (let i=start; i<end; i++) {
             this.noteXLookup[i] = this.noteXLookup[i].filter(n => !n.equals(note));
         }
     }
-    deleteNoteFromTrack(note) {
+    deleteNoteFromTrack(note: DrawnNote) {
         // the duration parameter seems to be unused
         const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
         this.piano.track.removeNote(keyIndex, note.x * this.cellBeatLength / this.cellWidth, undefined, undefined);
     }
-    addNoteIndices(note) {
+    addNoteIndices(note: DrawnNote) {
         const [start, end] = this.calculateNoteIndexRange(note);
         for (let i=start; i<end; i++) {
             this.noteXLookup[i].push(note);
         }
     }
-    addNoteToTrack(note, velocity) {
+    addNoteToTrack(note: DrawnNote, velocity: number) {
         const beatNumber = note.x * this.cellBeatLength / this.cellWidth;
         const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
         const noteLength = note.length * this.smallestBeatIncrement / this.smallestPixelBeatIncrement;
         this.piano.track.addNote(new Note(keyIndex, beatNumber, noteLength, velocity));
     }
-    processFreeMouseOver(x, y) {
+    processFreeMouseOver(x: number, y: number) {
         const [noteUnderCursor, clickedPosition] = this.findExistNote(x, y);
         if (noteUnderCursor) {
             switch (clickedPosition) {
@@ -498,7 +569,7 @@ class Grid {
             document.body.style.cursor = '';
         }
     }
-    processClick(x, y, draw, button) {
+    processClick(x: number, y: number, draw: boolean | undefined, button: number) {
         var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
         var notePixelLength = this.currentNoteDuration / this.cellBeatLength * this.cellWidth;
         var cellLocationOffset = Math.floor(x % this.cellWidth / (this.smallestBeatIncrement * this.cellWidth / this.cellBeatLength)) * this.smallestPixelBeatIncrement;
@@ -526,7 +597,7 @@ class Grid {
                 }
                 this.drawNotes();
                 this.piano.track.removeNote(keyIndex, noteToDelete.x * this.cellBeatLength / this.cellWidth, this.currentNoteDuration, 1);
-            } else if (button === 2 && clickedPosition !== 'center') {
+            } else if (button === 2 && clickedPosition !== 'center' && clickedPosition != null) {
                 this.grabbingNote = {
                     note: noteToDelete,
                     clickedPosition: clickedPosition
@@ -543,7 +614,7 @@ class Grid {
             this.piano.track.addNote(new Note(keyIndex, beatNumber, this.currentNoteDuration, this.currentNoteVelocity));
         }
     }
-    addNote(note) {
+    addNote(note: Note) {
         var currentIndex = Math.round(note.beat * this.cellWidth / this.cellBeatLength / this.smallestPixelBeatIncrement);
         var durationInIncrements = note.duration / this.smallestBeatIncrement;
         var notePixelLength = note.duration / this.cellBeatLength * this.cellWidth;
@@ -551,7 +622,7 @@ class Grid {
         this.addNotes(currentIndex, durationInIncrements, noteToDraw);
         //this.processClick(note.beat * this.cellWidth / this.cellBeatLength, this.startY + i * this.keyHeight , false);
     }
-    addNotes(currentIndex, durationIncrements, noteToDraw) {
+    addNotes(currentIndex: number, durationIncrements: number, noteToDraw: DrawnNote) {
         if (durationIncrements == 0) {
             return;
         }
@@ -566,7 +637,7 @@ class Grid {
         }
 
     }
-    removeNote(x, y, notes) {
+    removeNote(x: number, y: number, notes: DrawnNote[]) {
         for (var i = 0; i < notes.length; i++) {
             if (notes[i].y == y && notes[i].x == x) {
                 notes.splice(i, 1);
@@ -574,7 +645,7 @@ class Grid {
             }
         }
     }
-    checkSameNote(noteToDraw, notes) {
+    checkSameNote(noteToDraw: DrawnNote, notes: DrawnNote[]): DrawnNote | false {
         for (var i = 0; i < notes.length; i++) {
             if (notes[i].y == noteToDraw.y)
                 return notes[i];
@@ -597,7 +668,13 @@ class Grid {
 
 
 class DrawnNote {
-    constructor(x, y, length, isStart, startIndex) {
+    y: number;
+    x: number;
+    length: number;
+    isStart: boolean;
+    startIndex?: number;
+
+    constructor(x: number, y: number, length: number, isStart: boolean, startIndex?: number) {
         this.x = x;
         this.y = y;
         this.length = length;
@@ -605,7 +682,7 @@ class DrawnNote {
         this.startIndex = startIndex;
     }
 
-    equals(o) {
+    equals(o: any) {
         if (o instanceof DrawnNote) {
             return this.x === o.x && this.y === o.y && this.length === o.length && this.isStart === o.isStart && this.startIndex === o.startIndex;
         }
@@ -613,21 +690,22 @@ class DrawnNote {
     }
 }
 
-MIDI_UPLOAD_URL = "/api/import/midi"
+const MIDI_UPLOAD_URL = "/api/import/midi"
 
 window.addEventListener('load', function(){
     $('#upload-midi').on('submit', function(e) {
         e.preventDefault();
 
-        form = $("#upload-midi").get(0);
+        const form = $("#upload-midi").get(0) as HTMLFormElement;
 
         var fd = new FormData(form);
 
+        // @ts-ignore
         if(fd == null || fd == ""){        //when empty or null
             return;
         }
 
-        var csrf_token = getCookie("csrftoken");
+        const csrf_token = getCookie("csrftoken") as string;
 
         $.ajax(
             {
@@ -638,7 +716,13 @@ window.addEventListener('load', function(){
                     xhr.setRequestHeader("X-CSRFToken", csrf_token);
                 },
                 error:function(){},
-                complete: sequencer.processImportResponse.bind(sequencer),
+                complete: (res) => {
+                    if (sequencer != null) {
+                        sequencer.processImportResponse(res);
+                    } else {
+                        console.warn('sequencer is null');
+                    }
+                },
                 'processData': false,
                 'contentType': false,
                 dataType:'json'
@@ -648,14 +732,14 @@ window.addEventListener('load', function(){
 });
 
 export const initialize = function() {
-    var menuHeight = document.getElementById('menu').clientHeight;
-    var counterHeight = document.getElementById('measure-counter').clientHeight;
+    var menuHeight = (document.getElementById('menu') as HTMLDivElement).clientHeight;
+    var counterHeight = (document.getElementById('measure-counter') as HTMLDivElement).clientHeight;
     var height = window.innerHeight - menuHeight - counterHeight - 20;
-    document.getElementById('main').style.height = height + "px";
-    document.getElementById('quarter').style.border = "inset";
+    (document.getElementById('main') as HTMLDivElement).style.height = height + "px";
+    (document.getElementById('quarter') as HTMLDivElement).style.border = "inset";
 };
 
-function calculateMidiNumber(octave, noteChar) {
+function calculateMidiNumber(octave: number, noteChar: string) {
     ['g#', 'g', 'f#', 'f', 'e', 'd#', 'd', 'c#', 'c', 'b', 'a#', 'a'];
     let nn = 12 + 12 * octave;
     switch (noteChar) {
