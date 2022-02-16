@@ -6,6 +6,9 @@
 */
 
 class WebMIDIPlayer {
+    private midi: WebMidi.MIDIAccess | null;
+    private outputId: string;
+
     constructor() {
         this.midi = null;
         this.outputId = "output-0";
@@ -23,14 +26,16 @@ class WebMIDIPlayer {
                 
                 // default output set
                 const outs = this.listOutputPorts();
-                let name = null;
+                let name: string | null = null;
                 outs.forEach(o => {
                     console.log(o);
                     // if (name == null) {
                         name = o.id;
                     // };
                 });
-                this.setOutputPort(name);
+                if (name != null) {
+                    this.setOutputPort(name);
+                }
             },
             (msg) => {
                 console.log("failed to get midi access");
@@ -39,12 +44,12 @@ class WebMIDIPlayer {
         );
     }
 
-    listOutputPorts() {
+    listOutputPorts(): WebMidi.MIDIOutputMap {
         this._checkMidiState();
-        return this.midi.outputs;
+        return (this.midi as WebMidi.MIDIAccess).outputs;
     }
 
-    setOutputPort(outputId) {
+    setOutputPort(outputId: string) {
         console.log(`output port set: ${outputId}`);
         this.outputId = outputId;
     }
@@ -53,18 +58,22 @@ class WebMIDIPlayer {
         this._currentOutput().clear();
     }
 
-    outputImmediately(data) {
+    outputImmediately(data: number[]) {
         // console.log("scheduled immediately: " + data);
         this._currentOutput().send(data);
     }
 
-    outputWithTimestamp(data, timestamp) {
+    outputWithTimestamp(data: number[], timestamp: number) {
         // console.log("scheduled with timestamp: " + data);
         this._currentOutput().send(data, timestamp);
     }
 
-    _currentOutput() {
-        return this.midi.outputs.get(this.outputId);
+    _currentOutput(): WebMidi.MIDIOutput {
+        const out = this.midi?.outputs.get(this.outputId);
+        if (out == null) {
+            throw "midi output not set";
+        }
+        return out;
     }
 
     _checkMidiState() {
@@ -77,7 +86,16 @@ class WebMIDIPlayer {
 
 
 class WebMIDIScheduler {
-    constructor(interval, player) {
+    private player: WebMIDIPlayer;
+    interval: number
+    private callback;
+    private isRunning: boolean;
+    private _currentLoop: number | null;
+
+    playbackTimeMillis: number;
+    private _playbackStartedTs: number | null;
+
+    constructor(interval: number, player: WebMIDIPlayer) {
         const _interval = interval || 50 // 50 ms;
         this.player = player;
         this.interval = _interval;
@@ -94,7 +112,7 @@ class WebMIDIScheduler {
         this.isRunning = true;
         this.playbackTimeMillis = 0;
         this._playbackStartedTs = performance.now();
-        this._currentLoop = setInterval(this._tick.bind(this), this.interval);
+        this._currentLoop = setInterval(this._tick.bind(this), this.interval) as unknown as number;
     }
 
     stop() {
@@ -103,11 +121,11 @@ class WebMIDIScheduler {
         }
     }
 
-    scheduleNow(data) {
+    scheduleNow(data: number[]) {
         this.player.outputImmediately(data);
     }
 
-    scheduleNowWithDelay(data, delayMillis) {
+    scheduleNowWithDelay(data: number[], delayMillis: number) {
         const ts = performance.now() + delayMillis;
         this.player.outputWithTimestamp(data, ts);
     }
@@ -122,12 +140,23 @@ class WebMIDIScheduler {
             this.player.outputWithTimestamp(entry.data, 100+timestamp+entry.delayMillis);
         }
 
+        if (this._playbackStartedTs == null) {
+            throw new Error("logic error _playbackStartedTs is null");
+        }
         this.playbackTimeMillis = timestamp - this._playbackStartedTs;
     }
 }
 
 
 class WebMIDISchedulerProxy {
+    private _scheduler: WebMIDIScheduler
+    _entries: {
+        data: number[],
+        delayMillis: number
+    }[];
+    private requestDuration: number;
+    private playbackTime: number;
+
     constructor(scheduler) {
         this._scheduler = scheduler;
         this._entries = [];
@@ -135,7 +164,7 @@ class WebMIDISchedulerProxy {
         this.playbackTime = this._scheduler.playbackTimeMillis;
     }
 
-    scheduleWithDelay(data, delayMillis) {
+    scheduleWithDelay(data: number[], delayMillis: number) {
         this._entries.push({
             data: data,
             delayMillis: delayMillis
