@@ -163,7 +163,7 @@ export const instrumentArray: InstrumentInfo[] = [
     },
 ];
 
-const instrumentList: { [key: string]: InstrumentInfo } = {};
+export const instrumentList: { [key: string]: InstrumentInfo } = {};
 export const instrumentNameToID: { [key: string]: number } = {};
 for (let i = 0; i < instrumentArray.length; i++){
     let instr = instrumentArray[i];

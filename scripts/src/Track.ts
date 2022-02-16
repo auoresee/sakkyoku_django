@@ -25,7 +25,7 @@ export class Track {
     private sched: any
     private mSched: WebMIDIScheduler;
     gainNode: GainNode
-    private notes: Note[];
+    notes: Note[];
     private instrumentID: number
     private instrument: InstrumentInfo
     private trackNumber: number

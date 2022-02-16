@@ -4,9 +4,9 @@ import { Track } from './Track';
  * A Song contains 0 or more tracks, a tempo
  */
 export class Song {
-    private name: string;
+    name: string;
     tempo: number;
-    private tracks: Track[];
+    tracks: Track[];
     private songID: number; //0 if not saved in the server
     private userID: number;
     private isOnRelease: boolean; //whether this song is accessible by the public
@@ -50,7 +50,7 @@ export class Song {
      * Play the song at the specified beat
      * @param {Number} beat
      */
-    play(beat) {
+    play(beat: number) {
         for (var i = 0; i < this.tracks.length; i++) {
             this.tracks[i].play(beat);
         }
@@ -65,6 +65,11 @@ export class Song {
 
 
     getJSON(): string {
+        let json_tracks = [];
+        for(let i = 0; i < this.tracks.length; i++){
+            json_tracks[i] = this.tracks[i].getJSONObject();
+        }
+
         let jsonobj = {
             name: this.name,
             tempo: this.tempo,
@@ -74,13 +79,8 @@ export class Song {
             createdDate: this.createdDate,
             releasedDate: this.releasedDate,
             lastUpdatedDate: this.lastUpdatedDate,
+            tracks: json_tracks
         };
-        let json_tracks = [];
-        for(let i = 0; i < this.tracks.length; i++){
-            json_tracks[i] = this.tracks[i].getJSONObject();
-        }
-        jsonobj.tracks = json_tracks;
-
         return JSON.stringify(jsonobj);
     }
 

@@ -4,7 +4,11 @@ export let audioCtx: AudioContext;
 const audioInitEventName = typeof document.ontouchend !== 'undefined' ? 'touchend' : 'mouseup';
 document.addEventListener(audioInitEventName, initAudioContext);
 
-let isWebaudioContextResumed = false;
+export let isWebaudioContextResumed = false;
+
+export function setIsWebaudioContextResumed(value: boolean) {
+    isWebaudioContextResumed = value;
+}
 
 function initAudioContext(){
     console.log("silent play");

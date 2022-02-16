@@ -3,7 +3,7 @@
  */
 
 var queryString = window.location.search;
-var queryObject = new Object();
+var queryObject: {[key: string]: string} = {};
 
 function processQuery(){
     if(queryString){

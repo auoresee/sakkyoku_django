@@ -1,7 +1,26 @@
+import { Controls } from "./Controls";
+import { InstrumentInfo, instrumentList, instrumentNameToID } from "./instruments";
+import { Song } from "./Song";
+import { Track } from "./Track";
+
 const DEFAULT_TRACK_NUM = 8;
 const UPLOAD_URL = "/api/songs/save";
 
-class Sequencer {
+export class Sequencer {
+    song: Song;
+    private instruments: {
+        [key: string]: InstrumentInfo;
+    };
+    private tracks: Track[];
+    private trackNames;
+    private pianos;
+    private grids;
+    private index: number;
+
+    private isWriteMode: boolean;
+
+    //menu   
+    private controls: Controls;
 
     constructor() {
         this.song = new Song();
@@ -19,14 +38,14 @@ class Sequencer {
         this.controls.addListeners();
 
         let saveExist = this.restoreLocalSavedJSON();
-        if(!saveExist){
+        if(!saveExist) {
             console.debug("Local save doesn't exist");
             this.createNewSong();
         }
 
-        setInterval(function () {
+        setInterval(() => {
             this.save();
-        }.bind(this), 5000);
+        }, 5000);
 
     }
 
@@ -50,12 +69,12 @@ class Sequencer {
         }
     }
 
-    generateTrack(instrument_name){
-        let new_track = this.song.createTrack(instrumentNameToID[instrument_name]);
+    generateTrack(instrumentName: string){
+        let new_track = this.song.createTrack(instrumentNameToID[instrumentName]);
         this.addTrack(new_track);
     }
 
-    addTrack(track){
+    addTrack(track: Track) {
         let i = this.trackNames.length;
         this.trackNames[i] = this.generateTrackName(i, track.instrument);
         this.pianos[i] = new Piano(20, 40, 30, track);
@@ -231,7 +250,7 @@ class Sequencer {
     getCurrentTrackName() {
         return this.trackNames[this.index];
     }
-    changeTrack(trackID) {
+    changeTrack(trackID: number) {
         let track = this.tracks[trackID];
         this.controls.instrumentsElement.selectedIndex = track.instrumentID;
         this.controls.setTrackVolumeSliderValue(track.volume);
@@ -239,7 +258,7 @@ class Sequencer {
         console.debug(this.song.getJSON())
     }
 
-    generateTrackName(trackID, instrument){
+    generateTrackName(trackID: number, instrument: InstrumentInfo){
         return "" + (trackID + 1) + ": " + instrument.displayName;
     }
 
