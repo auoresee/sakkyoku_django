@@ -7,6 +7,12 @@
 6. python3 manage.py migrate
 7. サーバーを起動し、データベースを構築する
    /admin/db/にアクセスし、SQLパスワードを入力
+8. Typescript ファイルをビルドする
+```bash
+cd scripts
+npm install --also=dev
+npm run build
+```
    
 # サーバーの起動
     python3 manage.py runserver
