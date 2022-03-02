@@ -3,9 +3,9 @@
  */
 
 var queryString = window.location.search;
-var queryObject = new Object();
+export const queryObject: {[key: string]: string} = {};
 
-function processQuery(){
+export function processQuery(){
     if(queryString){
         queryString = queryString.substring(1);
         var parameters = queryString.split('&');

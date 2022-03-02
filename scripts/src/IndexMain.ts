@@ -1,3 +1,6 @@
+import $ from 'jquery';
+import { Song } from './Song';
+
 //const SONGLIST_REQUEST_URL = "php/songlistmanager.php";
 const SONGLIST_REQUEST_URL = "api/songs/";
 
@@ -49,7 +52,7 @@ class IndexMain {
     }
 
     //sends GET request to download song list
-    requestSongList(parameters, mode){
+    requestSongList(parameters: { target: number; release: number; sort: number; offset: number; num: number; }, mode: number){
         $.ajax(
             {
                 url: SONGLIST_REQUEST_URL,
@@ -62,7 +65,7 @@ class IndexMain {
         );
     }
 
-    checkResponseValidity(res){
+    checkResponseValidity(res: string){
         if(res.charAt(0) == "!"){   //error
             alert(res.substring(1));
             return false;
@@ -74,7 +77,7 @@ class IndexMain {
         return true;
     }
 
-    processSongListResponse(mode, response){
+    processSongListResponse(mode: number, response: { responseText: any; }){
         let res = response.responseText;
         console.debug(res);
 
@@ -88,9 +91,9 @@ class IndexMain {
         this.setSongListToHTML(song_list, mode);
     }
 
-    setSongListToHTML(song_list, mode){
+    setSongListToHTML(song_list: Song[], mode: number){
         let html = "";
-        song_list.forEach(element => {
+        song_list.forEach((element: Song) => {
             html += this.generateSongListRowHTML(element);
         });
 
@@ -102,7 +105,7 @@ class IndexMain {
         }
     }
 
-    generateSongListRowHTML(row){
+    generateSongListRowHTML(row: Song){
         return '<a href="sequencer.html?song_id=' + row.songID + '">' + row.name + '</a><br>\n';
     }
 }
