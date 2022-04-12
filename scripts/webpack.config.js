@@ -8,7 +8,7 @@ module.exports = {
     },
     output: {
         filename: '[name].js',
-        path: path.resolve(__dirname, '../sakkyokuapp/static/sakkyokuapp/javascript/')
+        path: path.resolve(__dirname, './dist')
     },
     module: {
         rules: [
