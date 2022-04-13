@@ -19,6 +19,8 @@ docker-compose up -d
 cd scripts
 npm install --also=dev
 npm run build
+cp dist/* ../sakkyokuapp/static/sakkyokuapp/javascript/
 ```
+
 9. サーバーを起動する
     python3 manage.py runserver
