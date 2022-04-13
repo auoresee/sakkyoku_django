@@ -23,14 +23,14 @@ export class WebMIDIPlayer {
             (ma) => {
                 console.log("got midi access");
                 this.midi = ma;
-                
+
                 // default output set
                 const outs = this.listOutputPorts();
                 let name: string | null = null;
                 outs.forEach(o => {
                     console.log(o);
                     // if (name == null) {
-                        name = o.id;
+                    name = o.id;
                     // };
                 });
                 if (name != null) {
@@ -89,6 +89,7 @@ export class WebMIDIScheduler {
     private player: WebMIDIPlayer;
     interval: number
     private callback: ((proxy: WebMIDISchedulerProxy) => void) | null;
+    timeUpdateCallback: ((currentTime: number) => void) | null;
     private isRunning: boolean;
     private _currentLoop: number | null;
 
@@ -100,6 +101,7 @@ export class WebMIDIScheduler {
         this.player = player;
         this.interval = _interval;
         this.callback = null;
+        this.timeUpdateCallback = null;
         this.isRunning = false;
         this._currentLoop = null;
 
@@ -141,13 +143,16 @@ export class WebMIDIScheduler {
         const entries = proxy._entries;
 
         for (const entry of entries) {
-            this.player.outputWithTimestamp(entry.data, 100+timestamp+entry.delayMillis);
+            this.player.outputWithTimestamp(entry.data, 100 + timestamp + entry.delayMillis);
         }
 
         if (this._playbackStartedTs == null) {
             throw new Error("logic error _playbackStartedTs is null");
         }
         this.playbackTimeMillis = timestamp - this._playbackStartedTs;
+        if (this.timeUpdateCallback !== null) {
+            this.timeUpdateCallback(this.playbackTimeMillis);
+        }
     }
 }
 
@@ -164,7 +169,7 @@ export class WebMIDISchedulerProxy {
     constructor(scheduler: WebMIDIScheduler) {
         this._scheduler = scheduler;
         this._entries = [];
-        this.requestDuration = this._scheduler.interval*2;
+        this.requestDuration = this._scheduler.interval * 2;
         this.playbackTime = this._scheduler.playbackTimeMillis;
     }
 

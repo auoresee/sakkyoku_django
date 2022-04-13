@@ -32,15 +32,25 @@ export class TrackCoordinator {
     private sched: WebMIDIScheduler;
     private globalBackend: BackendKind;
 
+    private _currentTime: number;
+    public get currentTime() {
+        return this._currentTime;
+    }
+
     constructor() {
         this.tracks = [];
         this.sched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.globalBackend = DEFAULT_BACKEND;
+
+        this._currentTime = 0;
+        this.sched.timeUpdateCallback = (t) => this._currentTime = t;
     }
 
     reset() {
         this.sched.stop();
         this.sched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this._currentTime = 0;
+        this.sched.timeUpdateCallback = (t) => this._currentTime = t;
         this.tracks = [];
     }
 

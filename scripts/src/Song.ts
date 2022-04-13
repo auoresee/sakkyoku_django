@@ -116,7 +116,15 @@ export class Song {
         }
     }
 
+    public get currentTime() {
+        return this.trackCoord.currentTime;
+    }
 
+    public get currentTimeInBeat() {
+        const timeS = this.currentTime / 1000;
+        const secPerBeat = 60 / this.tempo;
+        return timeS / secPerBeat;
+    }
 }
 
 type SongJSON = {

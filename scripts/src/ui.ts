@@ -254,6 +254,8 @@ export class Grid {
     noteCanvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D;
     noteContext: CanvasRenderingContext2D;
+    barCanvas: HTMLCanvasElement;
+    barCanvasContext: CanvasRenderingContext2D;
     grid: HTMLElement;
     container: HTMLElement;
     drawnNotes: never[];
@@ -265,6 +267,8 @@ export class Grid {
     pastKey: any;
     measureCounter: HTMLCanvasElement;
     measureCounterContext: CanvasRenderingContext2D;
+    measureBar: HTMLCanvasElement;
+    measureBarContext: CanvasRenderingContext2D;
     noteXLookup: DrawnNote[][];
     grabbingNote: null | {
         clickedPosition: 'left' | 'right' | 'center',
@@ -280,6 +284,7 @@ export class Grid {
     smallestPixelBeatIncrement: number = 0;
     currentSmallestPixelBeatIncrement: number = 0;
     last_cursor: string = '';
+    currentTimeBar: number;
     constructor() {
         this.beatsPerMeter = 4;
         this.canvas = document.getElementById('canvas-grid') as any;
@@ -297,8 +302,13 @@ export class Grid {
         this.pastKey;
         this.measureCounter = document.getElementById("measure-counter-canvas") as any;
         this.measureCounterContext = this.measureCounter.getContext("2d") as any;
+        this.measureBar = document.getElementById("measure-bar-canvas") as any;
+        this.measureBarContext = this.measureBar.getContext('2d') as any;
+        this.barCanvas = document.getElementById('canvas-bar') as any;
+        this.barCanvasContext = this.barCanvas.getContext('2d') as any;
         this.noteXLookup = [];
         this.grabbingNote = null; // null || {note, clickedPosition}
+        this.currentTimeBar = 2.5;
     }
     drawGrid(cellWidth: any, cellBeatLength: number, piano: Piano, notes: Note[]) {
         this.piano = piano;
@@ -306,6 +316,7 @@ export class Grid {
         this.keys = piano.keys;
         this.canvas.height = piano.height as number;
         this.noteCanvas.height = piano.height as number;
+        this.barCanvas.height = piano.height as number;
         this.grid.style.height = piano.height + "px";
         this.width = this.canvas.width;
         this.height = this.canvas.height;
@@ -419,6 +430,22 @@ export class Grid {
             e.preventDefault();
             return false;
         };
+    }
+    redrawMeasureBar(barPosition: number) {
+        const draw = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, needOffset: boolean) => {
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = 'red';
+
+            const x = (needOffset ? Piano.whiteWidth : 0) + barPosition * this.cellWidth;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        };
+        draw(this.measureBar, this.measureBarContext, true);
+        draw(this.barCanvas, this.barCanvasContext, false);
     }
     getKeyIndex(x: number, y: number) {
         var keyIndex = Math.floor((y - this.startY) / this.keyHeight);
