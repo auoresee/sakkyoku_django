@@ -8,6 +8,7 @@ import { InstrumentInfo, instrumentArray, instrumentNameToID } from "./instrumen
 import { WebMIDISchedulerProxy, WebMIDIPlayer, WebMIDIScheduler } from "./WebMIDIPlayer";
 import { audioCtx, masterGainNode } from "./SoundManager";
 import WebAudioScheduler from './web-audio-scheduler';
+import { timers } from "jquery";
 
 const gWebMidiPlayer = new WebMIDIPlayer();
 let gWebMidiIsReady = false;
@@ -19,13 +20,99 @@ try {
     console.log("cannot use webMidi");
 }
 
+type BackendKind = 'webaudio' | 'webmidi';
+
 // .value is either "webaudio" or "webmidi"
 const backendSelector = document.querySelector('#backendSelector') as HTMLSelectElement;
+
+const DEFAULT_BACKEND = 'webaudio';
+
+export class TrackCoordinator {
+    private tracks: Track[];
+    private sched: WebMIDIScheduler;
+    private globalBackend: BackendKind;
+
+    constructor() {
+        this.tracks = [];
+        this.sched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this.globalBackend = DEFAULT_BACKEND;
+    }
+
+    reset() {
+        this.sched.stop();
+        this.sched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this.tracks = [];
+    }
+
+    pushTrack(track: Track) {
+        this.tracks.push(track);
+    }
+
+    stopAll() {
+        for (const track of this.tracks) {
+            track.stopWebAudio();
+        }
+        this.sched.stop();
+    }
+
+    updateBackend(backend: BackendKind) {
+        for (const track of this.tracks) {
+            track.updateBackend(backend);
+        }
+        this.globalBackend = backend;
+    }
+
+    playAll(beat: number) {
+        const subCallbacks: ((proxy: WebMIDISchedulerProxy) => void)[] = [];
+        for (const track of this.tracks) {
+            const result = track.play(beat);
+            if (!result) {
+                continue;
+            }
+            if (result.backend !== this.globalBackend) {
+                console.error('backend mismatch');
+                return;
+            }
+            if (result.backend === 'webmidi') {
+                subCallbacks.push(result.callback);
+            }
+        }
+
+        if (subCallbacks.length > 0) {
+            const callback = (proxy: WebMIDISchedulerProxy) => {
+                for (const cb of subCallbacks) {
+                    cb(proxy);
+                }
+            };
+            this.sched.start(callback);
+        }
+
+        console.log(`play all with ${this.globalBackend} backend (${this.tracks.length} tracks loaded)`);
+    }
+
+    scheduleNowWebMidi(data: number[]) {
+        this.sched.scheduleNow(data);
+    }
+
+    scheduleWithDelayWebMidi(data: number[], millis: number) {
+        this.sched.scheduleNowWithDelay(data, millis);
+    }
+}
+
+export const gTrackCoord = new TrackCoordinator();
+
+// response to backend change
+backendSelector.addEventListener('change', (ev) => {
+    gTrackCoord.stopAll();
+    const backend = (ev.target as HTMLSelectElement).value as any;
+    gTrackCoord.updateBackend(backend);
+    console.log(`backend changed to ${backend}`);
+});
 
 export class Track {
     private song: Song;
     private sched: any
-    private mSched: WebMIDIScheduler;
+    private trackCoord: TrackCoordinator;
     gainNode: GainNode
     notes: Note[];
     instrumentID: number
@@ -34,14 +121,13 @@ export class Track {
     // Program Change イベントを送信したか? (Web MIDIのみ)
     private programChanged = false;
     // response to backend change
-    private backend: "webaudio" | "webmidi";
+    private backend: BackendKind;
     volume: number = 90;
 
     constructor(instrumentID: number, song: Song, trackNumber: number) {
         this.song = song;
         // @ts-ignore
         this.sched = new WebAudioScheduler({ context: audioCtx });
-        this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.gainNode = audioCtx.createGain();
         this.setVolume(90);
         this.notes = [];
@@ -54,15 +140,20 @@ export class Track {
         // Program Change イベントを送信したか? (Web MIDIのみ)
         this.programChanged = false;
 
-        // response to backend change
-        this.backend = backendSelector.value as any;
-        backendSelector.addEventListener('change', (ev) => {
-            if (this.sched != null) this.sched.stop();
-            if (this.mSched != null) this.mSched.stop();
-            this.backend = (ev.target as HTMLSelectElement).value as any;
-            console.log(`backend changed to ${this.backend}`);
-        });
+        this.backend = DEFAULT_BACKEND;
+        this.trackCoord = gTrackCoord;
     }
+
+    updateBackend(backend: BackendKind) {
+        this.backend = backend;
+    }
+
+    stopWebAudio() {
+        if (this.sched != null) {
+            this.sched.stop();
+        }
+    }
+
     /**
      * Add a single note to the track
      * @param {Note} The note to add
@@ -102,12 +193,17 @@ export class Track {
      * may want to add startbeat as an instance variable or something and then have a setter function
      * @param {Number} beat The beat of the song to start at
      */
-    play(beat: number) {
+    play(beat: number): false | {
+        backend: 'webaudio'
+    } | {
+        backend: 'webmidi',
+        callback: (proxy: WebMIDISchedulerProxy) => void
+    } {
         let startNote: number;
         if (beat != undefined) {
             startNote = this.findBeatIndex(beat);
             if (startNote == this.notes.length) {
-                return;
+                return false;
             }
             //offset = this.notes[startNote].beat - beat;
         }
@@ -123,17 +219,28 @@ export class Track {
 
         // this.playWithWebAudio(startNote, beat);
         //this.playWithWebMidi(startNote, beat);
-        this.playWithBackend(startNote, beat);
+        return this.playWithBackend(startNote, beat);
     }
 
-    playWithBackend(startNote: number, beat: number) {
+    playWithBackend(startNote: number, beat: number): {
+        backend: 'webaudio'
+    } | {
+        backend: 'webmidi',
+        callback: (proxy: WebMIDISchedulerProxy) => void
+    } {
         switch (this.backend) {
-        case 'webaudio':
-            this.playWithWebAudio(startNote, beat);
-            break;
-        case 'webmidi':
-            this.playWithWebMidi(startNote, beat);
-            break;
+            case 'webaudio':
+                this.playWithWebAudio(startNote, beat);
+                return {
+                    backend: 'webaudio'
+                };
+            case 'webmidi':
+                const callback = this.playWithWebMidi(startNote, beat);
+                return {
+                    backend: 'webmidi',
+                    callback: callback
+                };
+
         }
     }
 
@@ -149,17 +256,17 @@ export class Track {
         this.sched.start(callback);
     }
 
-    playWithWebMidi(startNote: number, beat: number) {
+    playWithWebMidi(startNote: number, beat: number): (proxy: WebMIDISchedulerProxy) => void {
         /* Web MIDI 用のスケジューラ */
         const scheduledNotes: boolean[] = []; // ノートがスケジューリングされたか否か
-        for (let i=0; i<this.notes.length; i++) {
+        for (let i = 0; i < this.notes.length; i++) {
             scheduledNotes.push(false);
         }
         const callback = (proxy: WebMIDISchedulerProxy) => {
             const beatTime = 60.0 / this.song.tempo;
             const requestedDuration = proxy.requestDuration;
             const playbackTime = proxy.playbackTime;
-            for (let i=startNote; i<this.notes.length; i++) {
+            for (let i = startNote; i < this.notes.length; i++) {
                 // プレイバック開始からノート開始までの実時間 (millis)
                 const absoluteTime = beatTime * (this.notes[i].beat - beat) * 1000;
                 if (absoluteTime < playbackTime) {
@@ -190,7 +297,8 @@ export class Track {
             }
         };
         this.midiProgramChangeIfNeeded();
-        this.mSched.start(callback);
+        // this.mSched.start(callback);
+        return callback;
     }
 
     playNote(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
@@ -218,12 +326,12 @@ export class Track {
     playMidiNote(noteNumber: number, duration: number, volume: number, freq: number) {
         this.midiProgramChangeIfNeeded();
         const ch = this.trackNumber;
-        const velocity = Math.floor(100*volume);
+        const velocity = Math.floor(100 * volume);
         const nn = this.mapMidiNoteNumber(freq, noteNumber);
         const noteOn = [0x90 | ch, nn, velocity];
         const noteOff = [0x80 | ch, nn, 0];
-        this.mSched.scheduleNow(noteOn);
-        this.mSched.scheduleNowWithDelay(noteOff, duration*1000);
+        this.trackCoord.scheduleNowWebMidi(noteOn);
+        this.trackCoord.scheduleWithDelayWebMidi(noteOff, duration * 1000);
     }
 
     mapMidiNoteNumber(freq: number, noteNumber: number) {
@@ -252,7 +360,7 @@ export class Track {
             volume: this.volume,
             notes: [],
         };
-        for(let i = 0; i < this.notes.length; i++){
+        for (let i = 0; i < this.notes.length; i++) {
             jsonobj.notes[i] = this.notes[i].getJSONObject();
         }
         return jsonobj;
@@ -268,7 +376,7 @@ export class Track {
         this.setVolume(jobj.volume);
 
         this.notes = [];
-        for(let i = 0; i < jobj.notes.length; i++){
+        for (let i = 0; i < jobj.notes.length; i++) {
             this.notes[i] = this.loadNoteJSONObject(jobj.notes[i]);
         }
     }
@@ -299,12 +407,8 @@ export class Track {
                 return;
             }
             const data = [0xc0 | this.trackNumber, pc];
-            this.mSched.scheduleNow(data);
+            this.trackCoord.scheduleNowWebMidi(data);
         }
-    }
-
-    resetBackend() {
-
     }
 }
 

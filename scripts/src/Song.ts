@@ -1,4 +1,4 @@
-import { Track } from './Track';
+import { gTrackCoord, Track, TrackCoordinator } from './Track';
 
 /**
  * A Song contains 0 or more tracks, a tempo
@@ -7,6 +7,7 @@ export class Song {
     name: string;
     tempo: number;
     tracks: Track[];
+    trackCoord: TrackCoordinator;
     songID: number; //0 if not saved in the server
     userID: number;
     isOnRelease: boolean; //whether this song is accessible by the public
@@ -18,6 +19,8 @@ export class Song {
         this.name = "New Song";
         this.tempo = 120;
         this.tracks = [];
+        this.trackCoord = gTrackCoord;
+        this.trackCoord.reset();
         this.songID = 0;    //0 if not saved in the server
         this.userID = 0;
         this.isOnRelease = false;   //whether this song is accessible by the public
@@ -31,7 +34,9 @@ export class Song {
      */
     createTrack(instrumentID: number) {
         this.tracks[this.tracks.length] = new Track(instrumentID, this, this.tracks.length);
-        return this.tracks[this.tracks.length - 1];
+        const track = this.tracks[this.tracks.length - 1];
+        this.trackCoord.pushTrack(track);
+        return track;
     }
     /**
      * Change the tempo of the track
@@ -51,9 +56,7 @@ export class Song {
      * @param {Number} beat
      */
     play(beat: number) {
-        for (var i = 0; i < this.tracks.length; i++) {
-            this.tracks[i].play(beat);
-        }
+        this.trackCoord.playAll(beat);
     }
     getAllNotes() {
         var allNotes = [];
@@ -66,7 +69,7 @@ export class Song {
 
     getJSON(): string {
         let json_tracks = [];
-        for(let i = 0; i < this.tracks.length; i++){
+        for (let i = 0; i < this.tracks.length; i++) {
             json_tracks[i] = this.tracks[i].getJSONObject();
         }
 
@@ -96,8 +99,8 @@ export class Song {
         this.userID = obj.userID;
         this.isOnRelease = obj.isOnRelease;
         this.createdDate = obj.createdDate;
-        
-        if( ! ('releasedDate' in obj) ){        //for compatibility
+
+        if (!('releasedDate' in obj)) {        //for compatibility
             this.releasedDate = new Date(2000, 0, 1).getTime();
         } else {
             this.releasedDate = obj.releasedDate as number;
@@ -105,10 +108,11 @@ export class Song {
 
         this.lastUpdatedDate = obj.lastUpdatedDate;
         let json_tracks = obj.tracks;
-        for(let i = 0; i < json_tracks.length; i++){
+        for (let i = 0; i < json_tracks.length; i++) {
             let track = new Track(0, this, i);
             track.loadJSONObject(json_tracks[i]);
             this.tracks[i] = track;
+            this.trackCoord.pushTrack(track);
         }
     }
 

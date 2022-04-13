@@ -211,7 +211,7 @@ class PianoKey {
     octave: number;
     width: number;
     frequency: number;
-    
+
     constructor(y: number, height: number, note: string, octave: number, frequency: number, midiNoteNumber: number) {
         this.octave = octave;
         this.frequency = frequency || 440;
@@ -270,7 +270,7 @@ export class Grid {
         clickedPosition: 'left' | 'right' | 'center',
         note: DrawnNote
     };
-    piano: any;
+    piano: Piano | undefined;
     keyHeight: number = 0;
     keys: any;
     width: any;
@@ -386,7 +386,7 @@ export class Grid {
             if (key == undefined) {
                 return;
             }
-            if (key != this.pastKey) {
+            if (key != this.pastKey && this.piano !== undefined) {
                 this.piano.drawNote(key, true);
                 if (this.pastKey != null) {
                     this.piano.drawNote(this.pastKey, false);
@@ -409,7 +409,9 @@ export class Grid {
         };
 
         this.grid.onmouseout = () => {
-            this.piano.drawNote(this.pastKey, false);
+            if (this.piano !== undefined) {
+                this.piano.drawNote(this.pastKey, false);
+            }
         };
 
         // disable right click menu
@@ -465,9 +467,9 @@ export class Grid {
     }
     edgeCheck(noteToCompare: DrawnNote, startIndex: number, indexStep: number, indexIter: number) {
         let index = startIndex;
-        for (let i=0; i<indexIter; i++) {
+        for (let i = 0; i < indexIter; i++) {
             index += indexStep;
-            if (index<0 || this.noteXLookup.length<=index) break;
+            if (index < 0 || this.noteXLookup.length <= index) break;
             const currentNote = this.checkSameNote(noteToCompare, this.noteXLookup[index]);
             if (!noteToCompare.equals(currentNote)) return true;
         }
@@ -485,7 +487,7 @@ export class Grid {
     }
     processGrabbingNoteMove(x: number, y: number) {
         // quantized x
-        const qx = Math.floor(x/this.currentSmallestPixelBeatIncrement) * this.currentSmallestPixelBeatIncrement;
+        const qx = Math.floor(x / this.currentSmallestPixelBeatIncrement) * this.currentSmallestPixelBeatIncrement;
         // delete the note from noteXLookup and track,
         // then add the note with modified start and length
         if (this.grabbingNote == null) {
@@ -493,83 +495,88 @@ export class Grid {
             return;
         }
         switch (this.grabbingNote.clickedPosition) {
-        case 'center':
-            console.log("unreachable");
-            break;
-        case 'right':
-            this.deleteNoteIndices(this.grabbingNote.note);
-            this.deleteNoteFromTrack(this.grabbingNote.note);
-            this.grabbingNote.note.length = qx - this.grabbingNote.note.x;
-            this.addNoteIndices(this.grabbingNote.note);
-            this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity)
-            this.drawNotes();
-            break;
-        case 'left':
-            this.deleteNoteIndices(this.grabbingNote.note);
-            this.deleteNoteFromTrack(this.grabbingNote.note);
-            const oldX = this.grabbingNote.note.x;
-            this.grabbingNote.note.x = qx;
-            this.grabbingNote.note.length += oldX - qx;
-            this.addNoteIndices(this.grabbingNote.note);
-            this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity);
-            this.drawNotes();
-            break;
-        default:
-            console.log("unreachable");
-            break;
+            case 'center':
+                console.log("unreachable");
+                break;
+            case 'right':
+                this.deleteNoteIndices(this.grabbingNote.note);
+                this.deleteNoteFromTrack(this.grabbingNote.note);
+                this.grabbingNote.note.length = qx - this.grabbingNote.note.x;
+                this.addNoteIndices(this.grabbingNote.note);
+                this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity)
+                this.drawNotes();
+                break;
+            case 'left':
+                this.deleteNoteIndices(this.grabbingNote.note);
+                this.deleteNoteFromTrack(this.grabbingNote.note);
+                const oldX = this.grabbingNote.note.x;
+                this.grabbingNote.note.x = qx;
+                this.grabbingNote.note.length += oldX - qx;
+                this.addNoteIndices(this.grabbingNote.note);
+                this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity);
+                this.drawNotes();
+                break;
+            default:
+                console.log("unreachable");
+                break;
         }
     }
     calculateNoteIndexRange(note: DrawnNote) {
-        return [note.x/this.smallestPixelBeatIncrement, (note.x+note.length)/this.smallestPixelBeatIncrement];
+        return [note.x / this.smallestPixelBeatIncrement, (note.x + note.length) / this.smallestPixelBeatIncrement];
     }
     deleteNoteIndices(note: DrawnNote) {
         const [start, end] = this.calculateNoteIndexRange(note);
-        for (let i=start; i<end; i++) {
+        for (let i = start; i < end; i++) {
             this.noteXLookup[i] = this.noteXLookup[i].filter(n => !n.equals(note));
         }
     }
     deleteNoteFromTrack(note: DrawnNote) {
-        // the duration parameter seems to be unused
-        const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
-        this.piano.track.removeNote(keyIndex, note.x * this.cellBeatLength / this.cellWidth, undefined, undefined);
+        if (this.piano !== undefined) {
+            // the duration parameter seems to be unused
+            const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
+            this.piano.track.removeNote(keyIndex, note.x * this.cellBeatLength / this.cellWidth, undefined as any, undefined as any);
+        }
     }
     addNoteIndices(note: DrawnNote) {
         const [start, end] = this.calculateNoteIndexRange(note);
-        for (let i=start; i<end; i++) {
+        for (let i = start; i < end; i++) {
             this.noteXLookup[i].push(note);
         }
     }
     addNoteToTrack(note: DrawnNote, velocity: number) {
-        const beatNumber = note.x * this.cellBeatLength / this.cellWidth;
-        const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
-        const noteLength = note.length * this.smallestBeatIncrement / this.smallestPixelBeatIncrement;
-        this.piano.track.addNote(new Note(keyIndex, beatNumber, noteLength, velocity));
+        if (this.piano !== undefined) {
+            const beatNumber = note.x * this.cellBeatLength / this.cellWidth;
+            const keyIndex = - Math.floor((note.y - this.startY) / this.keyHeight) + noteNumberOffset;
+            const noteLength = note.length * this.smallestBeatIncrement / this.smallestPixelBeatIncrement;
+            this.piano.track.addNote(new Note(keyIndex, beatNumber, noteLength, velocity));
+        }
     }
     processFreeMouseOver(x: number, y: number) {
         const [noteUnderCursor, clickedPosition] = this.findExistNote(x, y);
         if (noteUnderCursor) {
             switch (clickedPosition) {
-            case 'center':
-                if (this.last_cursor !== 'pointer') {
-                    this.last_cursor = 'pointer';
-                    document.body.style.cursor = 'pointer';
-                }
-                break;
-            case 'right':
-            case 'left':
-                if (this.last_cursor !== 'ew-resize') {
-                    this.last_cursor = 'ew-resize';
-                    document.body.style.cursor = 'ew-resize';
-                }
-                break;
+                case 'center':
+                    if (this.last_cursor !== 'pointer') {
+                        this.last_cursor = 'pointer';
+                        document.body.style.cursor = 'pointer';
+                    }
+                    break;
+                case 'right':
+                case 'left':
+                    if (this.last_cursor !== 'ew-resize') {
+                        this.last_cursor = 'ew-resize';
+                        document.body.style.cursor = 'ew-resize';
+                    }
+                    break;
             }
-            
+
         } else if (!noteUnderCursor && this.last_cursor !== '') {
             this.last_cursor = '';
             document.body.style.cursor = '';
         }
     }
     processClick(x: number, y: number, draw: boolean | undefined, button: number) {
+        if (this.piano === undefined) return;
         var cellLocation = Math.floor(x / this.cellWidth) * this.cellWidth;
         var notePixelLength = this.currentNoteDuration / this.cellBeatLength * this.cellWidth;
         var cellLocationOffset = Math.floor(x % this.cellWidth / (this.smallestBeatIncrement * this.cellWidth / this.cellBeatLength)) * this.smallestPixelBeatIncrement;
@@ -692,8 +699,8 @@ class DrawnNote {
 
 const MIDI_UPLOAD_URL = "/api/import/midi"
 
-window.addEventListener('load', function(){
-    $('#upload-midi').on('submit', function(e) {
+window.addEventListener('load', function () {
+    $('#upload-midi').on('submit', function (e) {
         e.preventDefault();
 
         const form = $("#upload-midi").get(0) as HTMLFormElement;
@@ -701,7 +708,7 @@ window.addEventListener('load', function(){
         var fd = new FormData(form);
 
         // @ts-ignore
-        if(fd == null || fd == ""){        //when empty or null
+        if (fd == null || fd == "") {        //when empty or null
             return;
         }
 
@@ -710,12 +717,12 @@ window.addEventListener('load', function(){
         $.ajax(
             {
                 url: MIDI_UPLOAD_URL,
-                type:'POST',
+                type: 'POST',
                 data: fd,
-                beforeSend: function(xhr, settings) {
+                beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", csrf_token);
                 },
-                error:function(){},
+                error: function () { },
                 complete: (res) => {
                     if (sequencer != null) {
                         sequencer.processImportResponse(res);
@@ -725,13 +732,13 @@ window.addEventListener('load', function(){
                 },
                 'processData': false,
                 'contentType': false,
-                dataType:'json'
+                dataType: 'json'
             }
         );
     });
 });
 
-export const initialize = function() {
+export const initialize = function () {
     var menuHeight = (document.getElementById('menu') as HTMLDivElement).clientHeight;
     var counterHeight = (document.getElementById('measure-counter') as HTMLDivElement).clientHeight;
     var height = window.innerHeight - menuHeight - counterHeight - 20;
@@ -743,42 +750,42 @@ function calculateMidiNumber(octave: number, noteChar: string) {
     ['g#', 'g', 'f#', 'f', 'e', 'd#', 'd', 'c#', 'c', 'b', 'a#', 'a'];
     let nn = 12 + 12 * octave;
     switch (noteChar) {
-    case 'c':
-        nn += 0;
-        break;
-    case 'c#':
-        nn += 1;
-        break;
-    case 'd':
-        nn += 2;
-        break;
-    case 'd#':
-        nn += 3;
-        break;
-    case 'e':
-        nn += 4;
-        break;
-    case 'f':
-        nn += 5;
-        break;
-    case 'f#':
-        nn += 6;
-        break;
-    case 'g':
-        nn += 7;
-        break;
-    case 'g#':
-        nn += 8;
-        break;
-    case 'a':
-        nn += 9;
-        break;
-    case 'a#':
-        nn += 10;
-        break;
-    case 'b':
-        nn += 11;
-        break;
+        case 'c':
+            nn += 0;
+            break;
+        case 'c#':
+            nn += 1;
+            break;
+        case 'd':
+            nn += 2;
+            break;
+        case 'd#':
+            nn += 3;
+            break;
+        case 'e':
+            nn += 4;
+            break;
+        case 'f':
+            nn += 5;
+            break;
+        case 'f#':
+            nn += 6;
+            break;
+        case 'g':
+            nn += 7;
+            break;
+        case 'g#':
+            nn += 8;
+            break;
+        case 'a':
+            nn += 9;
+            break;
+        case 'a#':
+            nn += 10;
+            break;
+        case 'b':
+            nn += 11;
+            break;
     }
     return nn;
 }
