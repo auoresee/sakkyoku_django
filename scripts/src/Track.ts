@@ -391,6 +391,11 @@ export class Track {
             }
         };
         this.midiProgramChangeIfNeeded();
+
+        // set channel volume
+        const volumeBytes = [0xb0 | this.trackNumber, 0x07, this.volume];
+        this.trackCoord.scheduleNowWebMidi(volumeBytes);
+
         // this.mSched.start(callback);
         return callback;
     }
