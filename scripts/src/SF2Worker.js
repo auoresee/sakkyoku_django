@@ -4,6 +4,7 @@ let load_sf2;
 let init_output;
 let note_on;
 let note_off;
+let program_change;
 let render_float;
 
 let audioPort;
@@ -26,19 +27,26 @@ function loadSf2() {
     init_output(sf2);
 }
 
-function noteOn(key, vel) {
+function noteOn(chan, key, vel) {
     if (note_on === undefined) {
         note_on = Module.cwrap('note_on', null, ['number', 'number', 'number', 'number']);
     }
-    note_on(sf2, 1, key, vel);
+    note_on(sf2, chan, key, vel);
     console.log('note on');
 }
 
-function noteOff(key) {
+function noteOff(chan, key) {
     if (note_off === undefined) {
         note_off = Module.cwrap('note_off', null, ['number', 'number', 'number']);
     }
-    note_off(sf2, 1, key);
+    note_off(sf2, chan, key);
+}
+
+function programChange(chan, pc, isDrum) {
+    if (program_change === undefined) {
+        program_change = Module.cwrap('program_change', null, ['number', 'number', 'number', 'number']);
+    }
+    program_change(sf2, chan, pc, isDrum);
 }
 
 function renderFloat(samples) {
@@ -97,13 +105,21 @@ function stepNote(dt) {
             case 'note-on': {
                 const key = entryMeta.entry.key;
                 const vel = entryMeta.entry.velocity / 127.0;
-                noteOn(key, vel);
+                noteOn(ch, key, vel);
                 break;
             }
             case 'note-off': {
                 const key = entryMeta.entry.key;
-                noteOff(key);
+                noteOff(ch, key);
                 break;
+            }
+            case 'program-change': {
+                const entry = entryMeta.entry;
+                programChange(ch, entry.pc, entry.isDrum);
+                break;
+            }
+            default: {
+                console.warn('unknown entry:', entryMeta.entry);
             }
         }
 

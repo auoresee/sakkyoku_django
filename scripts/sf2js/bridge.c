@@ -21,14 +21,20 @@ void init_output(tsf *f)
 EMSCRIPTEN_KEEPALIVE
 void note_on(tsf *f, int chan, int key, float velocity)
 {
-    tsf_note_on(f, chan, key, velocity);
+    tsf_channel_note_on(f, chan, key, velocity);
     // printf("chan %d key %d velocity %f\n", chan, key, velocity);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void note_off(tsf *f, int chan, int key)
 {
-    tsf_note_off(f, chan, key);
+    tsf_channel_note_off(f, chan, key);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void program_change(tsf *f, int chan, int pc, int is_drum)
+{
+    tsf_channel_set_presetnumber(f, chan, pc, is_drum);
 }
 
 EMSCRIPTEN_KEEPALIVE

@@ -405,6 +405,22 @@ export class Track {
         }[] = [];
         const beatTime = 60.0 / this.song.tempo;
 
+        // program change
+        let pc: number;
+        if (this.instrument.isDrum || this.instrument.programChange === null) {
+            pc = 0;
+        } else {
+            pc = this.instrument.programChange;
+        }
+        entries.push({
+            time: 0,
+            entry: {
+                type: 'program-change',
+                pc: pc,
+                isDrum: this.instrument.isDrum === undefined ? false : this.instrument.isDrum
+            }
+        });
+
         for (const note of this.notes) {
             // プレイバック開始からノート開始までの実時間 (millis)
             const absoluteTime = beatTime * (note.beat - beat) * 1000;

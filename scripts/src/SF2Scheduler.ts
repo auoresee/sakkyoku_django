@@ -40,6 +40,10 @@ export type Entry = {
 } | {
     type: 'note-off',
     key: number
+} | {
+    type: 'program-change',
+    pc: number,
+    isDrum: boolean
 };
 
 export type PlayData = {
