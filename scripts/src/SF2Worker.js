@@ -185,10 +185,10 @@ onmessage = (ev) => {
     if (sf2 === null) return;
     switch (data.type) {
         case 'note-on':
-            noteOn(data.key, data.vel);
+            noteOn(data.chan, data.key, data.vel);
             break;
         case 'note-off':
-            noteOff(data.key);
+            noteOff(data.chan, data.key);
             break;
     }
 }

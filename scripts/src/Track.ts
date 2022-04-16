@@ -168,6 +168,53 @@ export class TrackCoordinator {
         this.wmSched.scheduleNow(data);
     }
 
+    scheduleNowSf2(info: {
+        type: 'note',
+        chan: number,
+        key: number
+    } | {
+        type: 'program-change',
+        chan: number,
+        pc: number,
+        isDrum: boolean
+    }) {
+        switch (info.type) {
+            case 'note': {
+                this.sf2Sched.scheduleNow({
+                    type: 'channel',
+                    chan: info.chan,
+                    entry: {
+                        type: 'note-on',
+                        key: info.key,
+                        velocity: 100
+                    }
+                });
+                setTimeout(() => {
+                    this.sf2Sched.scheduleNow({
+                        type: 'channel',
+                        chan: info.chan,
+                        entry: {
+                            type: 'note-off',
+                            key: info.key
+                        }
+                    });
+                }, 500);
+                break;
+            }
+            case 'program-change': {
+                this.sf2Sched.scheduleNow({
+                    type: 'channel',
+                    chan: info.chan,
+                    entry: {
+                        type: 'program-change',
+                        pc: info.pc,
+                        isDrum: info.isDrum
+                    }
+                })
+            }
+        }
+    }
+
     scheduleWithDelayWebMidi(data: number[], millis: number) {
         this.wmSched.scheduleNowWithDelay(data, millis);
     }
@@ -192,8 +239,8 @@ export class Track {
     instrumentID: number
     instrument: InstrumentInfo
     trackNumber: number
-    // Program Change イベントを送信したか? (Web MIDIのみ)
-    private programChanged = false;
+    // Program Change イベントを送信したか? (Web MIDI, SF2のみ)
+    private programChanged = false; // FIXME: use me
     // response to backend change
     private backend: BackendKind;
     volume: number = 90;
@@ -401,6 +448,17 @@ export class Track {
         return callback;
     }
 
+    private getPcAndIsDrum(): [number, boolean] {
+        let pc: number;
+        if (this.instrument.isDrum || this.instrument.programChange === null) {
+            pc = 0;
+        } else {
+            pc = this.instrument.programChange;
+        }
+        const isDrum = this.instrument.isDrum === undefined ? false : this.instrument.isDrum;
+        return [pc, isDrum];
+    }
+
     playWithSF2(startNote: number, beat: number): {
         time: number,
         entry: Entry
@@ -412,18 +470,13 @@ export class Track {
         const beatTime = 60.0 / this.song.tempo;
 
         // program change
-        let pc: number;
-        if (this.instrument.isDrum || this.instrument.programChange === null) {
-            pc = 0;
-        } else {
-            pc = this.instrument.programChange;
-        }
+        const [pc, isDrum] = this.getPcAndIsDrum();
         entries.push({
             time: 0,
             entry: {
                 type: 'program-change',
                 pc: pc,
-                isDrum: this.instrument.isDrum === undefined ? false : this.instrument.isDrum
+                isDrum: isDrum
             }
         });
 
@@ -469,7 +522,18 @@ export class Track {
     }
 
     playNote(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
-        this.playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber);
+        switch (this.backend) {
+            case 'webaudio':
+                this.playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber);
+                break;
+            case 'webmidi':
+                this.playNoteWithWebMidi(noteNumber, beat, duration, volume, midiNoteNumber);
+                break;
+            case 'sf2':
+                this.playNoteWithSf2(noteNumber, beat, duration, volume, midiNoteNumber);
+                break;
+        }
+
     }
 
     /**
@@ -499,6 +563,23 @@ export class Track {
         const noteOff = [0x80 | ch, nn, 0];
         this.trackCoord.scheduleNowWebMidi(noteOn);
         this.trackCoord.scheduleWithDelayWebMidi(noteOff, duration * 1000);
+    }
+
+    playNoteWithSf2(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
+        if (this.programChanged) {
+            const [pc, isDrum] = this.getPcAndIsDrum();
+            this.trackCoord.scheduleNowSf2({
+                type: 'program-change',
+                chan: this.trackNumber,
+                pc: pc,
+                isDrum: isDrum
+            });
+        }
+        this.trackCoord.scheduleNowSf2({
+            type: 'note',
+            chan: this.trackNumber,
+            key: midiNoteNumber
+        });
     }
 
     mapMidiNoteNumber(freq: number, noteNumber: number) {

@@ -28,7 +28,8 @@ export class SF2Scheduler {
         this.player.stop();
     }
 
-    scheduleNow(data: Entry) {
+    async scheduleNow(data: InstantOutputType) {
+        await this.player.prepareAsync();
         this.player.output(data);
     }
 }
@@ -54,6 +55,12 @@ export type PlayData = {
     chan: number,
     entry: Entry
 };
+
+export type InstantOutputType = {
+    type: 'channel',
+    chan: number,
+    entry: Entry
+}
 
 export class SF2Player {
     private worker: Worker | null;
@@ -114,25 +121,29 @@ export class SF2Player {
         }, [node.port]);
     }
 
-    output(entry: Entry) {
+    output(info: InstantOutputType) {
         if (!this.ready) {
             console.warn('not ready');
             return;
         }
-        switch (entry.type) {
+        switch (info.entry.type) {
             case 'note-on':
                 this.worker!.postMessage({
                     type: 'note-on',
-                    key: entry.key,
-                    vel: entry.velocity / 127.0
+                    chan: info.chan,
+                    key: info.entry.key,
+                    vel: info.entry.velocity / 127.0
                 });
                 break;
             case 'note-off':
                 this.worker!.postMessage({
                     type: 'note-off',
-                    key: entry.key
+                    chan: info.chan,
+                    key: info.entry.key
                 });
                 break;
+            default:
+                console.warn('SF2Player output: unsupported entry: ' + info.entry.type)
         }
     }
 
