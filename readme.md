@@ -18,8 +18,7 @@ docker-compose up -d
 ```bash
 cd scripts
 npm install --also=dev
-npm run build
-cp dist/* ../sakkyokuapp/static/sakkyokuapp/javascript/
+./build_dev.sh
 ```
 
 9. サーバーを起動する
