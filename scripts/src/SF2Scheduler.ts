@@ -141,6 +141,13 @@ export class SF2Player {
     }
 
     async stop() {
+        console.log('closing SF2Player');
+        this.worker?.terminate();
+        this.worker = null;
+
         await this.audioCtx?.close();
+        this.audioCtx = null;
+
+        this.ready = false;
     }
 }

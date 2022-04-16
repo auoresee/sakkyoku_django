@@ -69,6 +69,7 @@ export class TrackCoordinator {
             track.stopWebAudio();
         }
         this.wmSched.stop();
+        this.sf2Sched.stop();
     }
 
     updateBackend(backend: BackendKind) {
