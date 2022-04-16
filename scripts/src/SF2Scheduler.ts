@@ -44,6 +44,9 @@ export type Entry = {
     type: 'program-change',
     pc: number,
     isDrum: boolean
+} | {
+    type: 'set-channel-volume',
+    volume: number
 };
 
 export type PlayData = {

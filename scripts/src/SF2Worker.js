@@ -5,6 +5,7 @@ let init_output;
 let note_on;
 let note_off;
 let program_change;
+let set_channel_volume;
 let render_float;
 
 let audioPort;
@@ -47,6 +48,13 @@ function programChange(chan, pc, isDrum) {
         program_change = Module.cwrap('program_change', null, ['number', 'number', 'number', 'number']);
     }
     program_change(sf2, chan, pc, isDrum);
+}
+
+function setChannelVolume(chan, fVolume) {
+    if (set_channel_volume === undefined) {
+        set_channel_volume = Module.cwrap('set_channel_volume', null, ['number', 'number', 'number']);
+    }
+    set_channel_volume(sf2, chan, fVolume);
 }
 
 function renderFloat(samples) {
@@ -101,21 +109,26 @@ function stepNote(dt) {
 
         // Processing
         const ch = entryMeta.chan;
+        const entry = entryMeta.entry;
         switch (entryMeta.entry.type) {
             case 'note-on': {
-                const key = entryMeta.entry.key;
-                const vel = entryMeta.entry.velocity / 127.0;
+                const key = entry.key;
+                const vel = entry.velocity / 127.0;
                 noteOn(ch, key, vel);
                 break;
             }
             case 'note-off': {
-                const key = entryMeta.entry.key;
+                const key = entry.key;
                 noteOff(ch, key);
                 break;
             }
             case 'program-change': {
-                const entry = entryMeta.entry;
                 programChange(ch, entry.pc, entry.isDrum);
+                break;
+            }
+            case 'set-channel-volume': {
+
+                setChannelVolume(ch, entry.volume / 127.0);
                 break;
             }
             default: {

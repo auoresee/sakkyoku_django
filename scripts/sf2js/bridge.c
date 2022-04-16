@@ -38,6 +38,12 @@ void program_change(tsf *f, int chan, int pc, int is_drum)
 }
 
 EMSCRIPTEN_KEEPALIVE
+void set_channel_volume(tsf *f, int chan, float volume)
+{
+    tsf_channel_set_volume(f, chan, volume);
+}
+
+EMSCRIPTEN_KEEPALIVE
 void render_float(tsf *f, float *buf, int samples)
 {
     tsf_render_float(f, buf, samples, 0);

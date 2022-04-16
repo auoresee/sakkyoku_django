@@ -421,6 +421,15 @@ export class Track {
             }
         });
 
+        // set channel volume
+        entries.push({
+            time: 0,
+            entry: {
+                type: 'set-channel-volume',
+                volume: this.volume
+            }
+        });
+
         for (const note of this.notes) {
             // プレイバック開始からノート開始までの実時間 (millis)
             const absoluteTime = beatTime * (note.beat - beat) * 1000;
