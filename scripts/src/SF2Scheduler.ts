@@ -101,7 +101,7 @@ export class SF2Player {
         await ctx.audioWorklet.addModule(new URL('./SF2Worklet.js', import.meta.url));
         const node = new AudioWorkletNode(ctx, 'sf2-processor');
         const gain = new GainNode(ctx);
-        gain.gain.value = 0.1;
+        gain.gain.value = 0.3;
         node.connect(gain);
         gain.connect(ctx.destination);
 
