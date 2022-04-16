@@ -46,10 +46,10 @@ void render_short(tsf *f, short *buf, int samples)
 
 tsf *SoundFont = NULL;
 
-int main()
-{
-    EM_ASM({ onReady(); });
-}
+// int main()
+// {
+//     EM_ASM({ onReady(); });
+// }
 
 #define key_min 69
 #define key_max (69 + 12)

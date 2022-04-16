@@ -5,6 +5,7 @@ module.exports = {
     entry: {
         index: './src/IndexMain.ts',
         sequencer: './src/SequencerMain.ts',
+        'sf2-worklet': './src/SF2Worklet.js',
     },
     output: {
         filename: '[name].js',
@@ -21,5 +22,6 @@ module.exports = {
     },
     resolve: {
         extensions: ['.tsx', '.ts', '.js']
-    }
+    },
+    devtool: 'source-map',
 };

@@ -96,7 +96,7 @@ export class Sequencer {
     }
 
     redrawCurrentTimeBar() {
-        console.log(this.song.currentTimeInBeat);
+        // console.log(this.song.currentTimeInBeat);
         this.grids[this.index].redrawMeasureBar(this.song.currentTimeInBeat);
     }
 

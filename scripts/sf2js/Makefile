@@ -1,5 +1,5 @@
 tfs.wasm tfs.js tfs.data: bridge.c FluidR3_GM.sf2 Makefile
-	emcc -o tfs.js bridge.c --preload-file FluidR3_GM.sf2 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["cwrap"]'
+	emcc -o tfs.js bridge.c --preload-file FluidR3_GM.sf2 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["cwrap"]' -s MODULARIZE -s EXPORT_NAME="createTFS"
 
 .PHONY: wasm
 wasm: tfs.wasm tfs.js tfs.data
