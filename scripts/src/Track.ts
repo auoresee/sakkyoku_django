@@ -29,7 +29,7 @@ const DEFAULT_BACKEND = 'webaudio';
 
 export class TrackCoordinator {
     private tracks: Track[];
-    private sched: WebMIDIScheduler;
+    private wmSched: WebMIDIScheduler;
     private globalBackend: BackendKind;
 
     private _currentTime: number;
@@ -39,18 +39,18 @@ export class TrackCoordinator {
 
     constructor() {
         this.tracks = [];
-        this.sched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this.wmSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.globalBackend = DEFAULT_BACKEND;
 
         this._currentTime = 0;
-        this.sched.timeUpdateCallback = (t) => this._currentTime = t;
+        this.wmSched.timeUpdateCallback = (t) => this._currentTime = t;
     }
 
     reset() {
-        this.sched.stop();
-        this.sched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this.wmSched.stop();
+        this.wmSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this._currentTime = 0;
-        this.sched.timeUpdateCallback = (t) => this._currentTime = t;
+        this.wmSched.timeUpdateCallback = (t) => this._currentTime = t;
         this.tracks = [];
     }
 
@@ -62,7 +62,7 @@ export class TrackCoordinator {
         for (const track of this.tracks) {
             track.stopWebAudio();
         }
-        this.sched.stop();
+        this.wmSched.stop();
     }
 
     updateBackend(backend: BackendKind) {
@@ -94,18 +94,18 @@ export class TrackCoordinator {
                     cb(proxy);
                 }
             };
-            this.sched.start(callback);
+            this.wmSched.start(callback);
         }
 
         console.log(`play all with ${this.globalBackend} backend (${this.tracks.length} tracks loaded)`);
     }
 
     scheduleNowWebMidi(data: number[]) {
-        this.sched.scheduleNow(data);
+        this.wmSched.scheduleNow(data);
     }
 
     scheduleWithDelayWebMidi(data: number[], millis: number) {
-        this.sched.scheduleNowWithDelay(data, millis);
+        this.wmSched.scheduleNowWithDelay(data, millis);
     }
 }
 
