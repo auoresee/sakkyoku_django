@@ -107,10 +107,17 @@ img {
     padding-right:90px;
 }
 
+#measure-counter canvas {
+    position: absolute;
+}
+
 #measure-counter-canvas {
 
 }
 
+#measure-bar-canvas {
+    z-index: 10;
+}
 
 #note-lengths div {
     display: inline-block;
@@ -143,6 +150,13 @@ img {
     left: 0;
     top: 0;
     z-index: 0;
+}
+
+#canvas-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index:10;
 }
 
 }
@@ -256,11 +270,16 @@ img {
 
 }
 
-
-
+#measure-counter canvas {
+    position: absolute;
+}
 
 #measure-counter-canvas {
 
+}
+
+#measure-bar-canvas {
+    z-index: 10;
 }
 
 
@@ -295,6 +314,13 @@ img {
     left: 0;
     top: 0;
     z-index: 0;
+}
+
+#canvas-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index:10;
 }
 
 }

@@ -1,1 +1,1 @@
-SQL_PASSWORD = "ここにSQLパスワードを入力"
+SQL_PASSWORD = "sql password here"

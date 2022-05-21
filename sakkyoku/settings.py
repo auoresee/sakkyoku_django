@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -82,10 +83,10 @@ DATABASES = {
     # }
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'noverdi', #　作成したデータベース名
-        'USER': 'noverdi', # ログインユーザー名
+        'NAME': 'noverdi',  # 　作成したデータベース名
+        'USER': 'noverdi',  # ログインユーザー名
         'PASSWORD': mysqlpassword.SQL_PASSWORD,
-        'HOST': '',
+        'HOST': 'db',
         'PORT': '',
     }
 }

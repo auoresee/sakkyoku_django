@@ -1,0 +1,21 @@
+version: '3'
+services:
+  db:
+    image: mariadb:latest
+    environment:
+      - MARIADB_USER=noverdi
+      - MARIADB_PASSWORD=noverdi
+      - MARIADB_ROOT_PASSWORD=noverdi
+      - MARIADB_DATABASE=noverdi
+    ports:
+      - "5201:3306"
+    volumes:
+      - "dbdata:/var/lib/mysql"
+  web:
+    build: ./
+    ports:
+      - "5200:8000"
+    depends_on:
+      - db
+volumes:
+  dbdata:

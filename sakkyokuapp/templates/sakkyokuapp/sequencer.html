@@ -50,6 +50,7 @@
                 <select name="backend" id="backendSelector">
                     <option value="webaudio">Web Audio</option>
                     <option value="webmidi">Web MIDI</option>
+                    <option value="sf2">Builtin SF2 synth</option>
                 </select>
 
                 <button id="clear">Clear Track</button>
@@ -88,6 +89,7 @@
     <div id="measure-counter-container">
         <div id="measure-counter">
             <canvas id="measure-counter-canvas" width="3200" height="15"></canvas>
+            <canvas id="measure-bar-canvas" width="3200" height="15"></canvas>
         </div>    
     </div>
 
@@ -103,6 +105,7 @@
             <div id="grid">
                 <canvas id="canvas-notes" width="3200"></canvas>
                 <canvas id="canvas-grid" width="3200"></canvas>
+                <canvas id="canvas-bar" width="3200"></canvas>
             </div>
         </div>    
     </div>

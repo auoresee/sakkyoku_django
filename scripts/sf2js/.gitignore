@@ -1,0 +1,10 @@
+/a.out.js
+/a.out.wasm
+*.o
+*.wasm
+/build/
+/*.mid
+/*.sf2
+/tfs.data
+/tfs.js
+/tfs.wasm

@@ -23,6 +23,8 @@ export class Sequencer {
     //menu   
     private controls: Controls;
 
+    private isPlaying: boolean;
+
     constructor() {
         this.song = new Song();
         this.instruments = instrumentList;
@@ -39,7 +41,7 @@ export class Sequencer {
         this.controls.addListeners();
 
         let saveExist = this.restoreLocalSavedJSON();
-        if(!saveExist) {
+        if (!saveExist) {
             console.debug("Local save doesn't exist");
             this.createNewSong();
         }
@@ -48,16 +50,17 @@ export class Sequencer {
             this.save();
         }, 5000);
 
+        this.isPlaying = false;
     }
 
-    createNewSong(){
+    createNewSong() {
         this.song = new Song();
         this.setMode(true);
         this.generateInitialTracks();
         this.setSong(this.song);
     }
 
-    generateInitialTracks(){
+    generateInitialTracks() {
 
         this.generateTrack("Piano");
         this.generateTrack("SopranoSax");
@@ -70,7 +73,7 @@ export class Sequencer {
         }
     }
 
-    generateTrack(instrumentName: string){
+    generateTrack(instrumentName: string) {
         let new_track = this.song.createTrack(instrumentNameToID[instrumentName]);
         this.addTrack(new_track);
     }
@@ -88,7 +91,13 @@ export class Sequencer {
         this.pianos[this.index].drawPiano('c', 7, 60);
         this.grids[this.index].drawGrid(100, 1, this.pianos[this.index], savedNotes);
         this.grids[this.index].drawNotes();
+        this.grids[this.index].redrawMeasureBar(0);
         this.controls.changeNoteLength(this.grids[this.index].currentNoteDuration);
+    }
+
+    redrawCurrentTimeBar() {
+        // console.log(this.song.currentTimeInBeat);
+        this.grids[this.index].redrawMeasureBar(this.song.currentTimeInBeat);
     }
 
     save() {
@@ -96,33 +105,33 @@ export class Sequencer {
         localStorage.setItem('song', this.song.getJSON());
     }
 
-    restoreLocalSavedJSON(){
+    restoreLocalSavedJSON() {
         let json = localStorage.getItem('song');
         let result = this.restoreSavedJSON(json);
         return result;
     }
 
     restoreSavedJSON(json: string | null | undefined) {
-        if(json == null || json == undefined) return false;
-        
+        if (json == null || json == undefined) return false;
+
         //this.song.changeTempo(parseInt(tempo, 10));
         this.song = new Song();
         this.song.loadJSON(json);
-        
+
         this.setSong(this.song);
         return true;
     }
 
-    setMode(is_write_mode: boolean){
-        if(is_write_mode == this.isWriteMode) return;
+    setMode(is_write_mode: boolean) {
+        if (is_write_mode == this.isWriteMode) return;
 
         this.isWriteMode = is_write_mode;
 
         //sets read only mode
-        if(this.isWriteMode == false){
+        if (this.isWriteMode == false) {
             this.controls.setReadOnlyMode();
         }
-        else{
+        else {
             this.controls.setWriteMode(this.song.isOnRelease);
         }
     }
@@ -158,8 +167,8 @@ export class Sequencer {
         this.drawMain(this.tracks[0], []);
     }
 
-    uploadSong(){
-        if(!this.song.name){        //when empty or null
+    uploadSong() {
+        if (!this.song.name) {        //when empty or null
             alert("曲名を入力してください");
             return;
         }
@@ -173,28 +182,28 @@ export class Sequencer {
         $.ajax(
             {
                 url: UPLOAD_URL,
-                type:'POST',
-                data: "json="+jsondata,
-                beforeSend: function(xhr, settings) {
+                type: 'POST',
+                data: "json=" + jsondata,
+                beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", csrf_token);
                 },
-                error:function(){},
-                complete:this.processUploadResponse.bind(this),
-                dataType:'json'
+                error: function () { },
+                complete: this.processUploadResponse.bind(this),
+                dataType: 'json'
             }
         );
     }
 
-    processUploadResponse(response: { responseText: any; }){
+    processUploadResponse(response: { responseText: any; }) {
         let res = response.responseText;
 
         console.debug(res);
 
-        if(res.charAt(0) == "!"){   //error
+        if (res.charAt(0) == "!") {   //error
             alert(res.substring(1));
             return;
         }
-        if(res.charAt(0) != "{"){   //not json
+        if (res.charAt(0) != "{") {   //not json
             alert("Invalid response: " + res);
             return;
         }
@@ -204,37 +213,37 @@ export class Sequencer {
 
         console.debug(rjson);
 
-        if(this.song.songID == 0){
+        if (this.song.songID == 0) {
             this.song.songID = rjson.songID;
         }
-        if(this.song.userID == 0){
+        if (this.song.userID == 0) {
             this.song.userID = rjson.userID;
         }
     }
 
-    processImportResponse(response: JQuery.jqXHR<any>){
+    processImportResponse(response: JQuery.jqXHR<any>) {
         let res = response.responseText;
 
         console.debug(res);
 
-        if(res.charAt(0) == "!"){   //error
+        if (res.charAt(0) == "!") {   //error
             alert(res.substring(1));
             return;
         }
-        if(res.charAt(0) != "{"){   //not json
+        if (res.charAt(0) != "{") {   //not json
             alert("Invalid response: " + res);
             return;
         }
 
         this.song = new Song();
         this.song.loadJSON(res);
-        
+
         this.setSong(this.song);
     }
 
 
-    releaseSong(){
-        if(!this.song.name){        //when empty or null
+    releaseSong() {
+        if (!this.song.name) {        //when empty or null
             alert("曲名を入力してください");
             return;
         }
@@ -259,7 +268,7 @@ export class Sequencer {
         console.debug(this.song.getJSON())
     }
 
-    generateTrackName(trackID: number, instrument: InstrumentInfo){
+    generateTrackName(trackID: number, instrument: InstrumentInfo) {
         return "" + (trackID + 1) + ": " + instrument.displayName;
     }
 
@@ -280,12 +289,19 @@ export class Sequencer {
         this.changeTrackInstrument(this.index, instrumentID);
     }
 
-    transposeCurrentTrack(num: number){
+    transposeCurrentTrack(num: number) {
         let track = this.tracks[this.index];
-        for(let i = 0; i < track.notes.length; i++){
+        for (let i = 0; i < track.notes.length; i++) {
             track.notes[i].noteNumber += num
         }
         this.drawMain(this.tracks[this.index], []);
+    }
+
+    play(beat: number) {
+        this.song.play(beat);
+        setInterval(() => {
+            this.redrawCurrentTimeBar();
+        }, 100);
     }
 }
 

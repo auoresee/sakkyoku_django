@@ -5,10 +5,11 @@ module.exports = {
     entry: {
         index: './src/IndexMain.ts',
         sequencer: './src/SequencerMain.ts',
+        'sf2-worklet': './src/SF2Worklet.js',
     },
     output: {
         filename: '[name].js',
-        path: path.resolve(__dirname, '../sakkyokuapp/static/sakkyokuapp/javascript/')
+        path: path.resolve(__dirname, './dist')
     },
     module: {
         rules: [
@@ -21,5 +22,6 @@ module.exports = {
     },
     resolve: {
         extensions: ['.tsx', '.ts', '.js']
-    }
+    },
+    devtool: 'source-map',
 };

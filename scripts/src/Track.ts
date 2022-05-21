@@ -8,6 +8,9 @@ import { InstrumentInfo, instrumentArray, instrumentNameToID } from "./instrumen
 import { WebMIDISchedulerProxy, WebMIDIPlayer, WebMIDIScheduler } from "./WebMIDIPlayer";
 import { audioCtx, masterGainNode } from "./SoundManager";
 import WebAudioScheduler from './web-audio-scheduler';
+import { timers } from "jquery";
+import { Entry, PlayData, SF2Player, SF2Scheduler } from "./SF2Scheduler";
+import * as _ from 'lodash';
 
 const gWebMidiPlayer = new WebMIDIPlayer();
 let gWebMidiIsReady = false;
@@ -19,29 +22,233 @@ try {
     console.log("cannot use webMidi");
 }
 
+const gSF2Player = new SF2Player();
+
+type BackendKind = 'webaudio' | 'webmidi' | 'sf2';
+
 // .value is either "webaudio" or "webmidi"
 const backendSelector = document.querySelector('#backendSelector') as HTMLSelectElement;
+
+const DEFAULT_BACKEND = 'webaudio';
+
+export class TrackCoordinator {
+    private tracks: Track[];
+    private wmSched: WebMIDIScheduler;
+    private sf2Sched: SF2Scheduler;
+    private globalBackend: BackendKind;
+
+    private _currentTime: number;
+    public get currentTime() {
+        return this._currentTime;
+    }
+
+    constructor() {
+        this.tracks = [];
+        this.wmSched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this.sf2Sched = new SF2Scheduler(gSF2Player);
+        this.globalBackend = DEFAULT_BACKEND;
+
+        this._currentTime = 0;
+        this.wmSched.timeUpdateCallback = (t) => this._currentTime = t;
+    }
+
+    reset() {
+        this.wmSched.stop();
+        this.wmSched = new WebMIDIScheduler(50, gWebMidiPlayer);
+        this._currentTime = 0;
+        this.wmSched.timeUpdateCallback = (t) => this._currentTime = t;
+        this.tracks = [];
+    }
+
+    pushTrack(track: Track) {
+        this.tracks.push(track);
+    }
+
+    stopAll() {
+        for (const track of this.tracks) {
+            track.stopWebAudio();
+        }
+        this.wmSched.stop();
+        this.sf2Sched.stop();
+    }
+
+    updateBackend(backend: BackendKind) {
+        for (const track of this.tracks) {
+            track.updateBackend(backend);
+        }
+        this.globalBackend = backend;
+    }
+
+    playAll(beat: number) {
+        switch (this.globalBackend) {
+            case 'webaudio': {
+                for (const track of this.tracks) {
+                    const result = track.play(beat);
+                    if (!result) {
+                        continue;
+                    }
+                    if (result.backend !== this.globalBackend) {
+                        console.error('backend mismatch');
+                        return;
+                    }
+                }
+                console.log(`play all with ${this.globalBackend} backend (${this.tracks.length} tracks loaded)`);
+                break;
+            }
+            case 'webmidi': {
+                const subCallbacks: any[] = [];
+                for (const track of this.tracks) {
+                    const result = track.play(beat);
+                    if (!result) {
+                        continue;
+                    }
+                    if (result.backend !== this.globalBackend) {
+                        console.error('backend mismatch');
+                        return;
+                    }
+                    subCallbacks.push(result.callback);
+                }
+                if (subCallbacks.length > 0) {
+                    switch (this.globalBackend) {
+                        case 'webmidi': {
+                            const callback = (proxy: WebMIDISchedulerProxy) => {
+                                for (const cb of subCallbacks) {
+                                    cb(proxy);
+                                }
+                            };
+                            this.wmSched.start(callback);
+                            break;
+                        }
+                        default:
+                            console.error('unreachable');
+                            break;
+                    }
+
+                }
+                break;
+            }
+            case 'sf2': {
+                const notes: PlayData[] = [];
+                for (const track of this.tracks) {
+                    const result = track.play(beat);
+                    if (!result) continue;
+                    if (result.backend !== this.globalBackend) {
+                        console.error('backend mismatch: ' + (result as any).backend + '!==' + this.globalBackend);
+                        return;
+                    }
+                    result.notes.forEach((note) => {
+                        const n2: PlayData = {
+                            time: note.time,
+                            entry: note.entry,
+                            chan: track.trackNumber
+                        };
+                        notes.push(n2);
+                    });
+                }
+
+                notes.sort((a, b) => {
+                    const timeCmp = a.time - b.time;
+                    if (timeCmp !== 0) return timeCmp;
+                    if (a.entry.type === 'note-on' && b.entry.type === 'note-off') {
+                        return 1;
+                    } else if (a.entry.type === 'note-off' && b.entry.type === 'note-on') {
+                        return -1;
+                    }
+                    return timeCmp;
+                });
+                this.sf2Sched.start(notes);
+                break;
+            }
+        }
+
+        console.log(`play all with ${this.globalBackend} backend (${this.tracks.length} tracks loaded)`);
+    }
+
+    scheduleNowWebMidi(data: number[]) {
+        this.wmSched.scheduleNow(data);
+    }
+
+    scheduleNowSf2(info: {
+        type: 'note',
+        chan: number,
+        key: number
+    } | {
+        type: 'program-change',
+        chan: number,
+        pc: number,
+        isDrum: boolean
+    }) {
+        switch (info.type) {
+            case 'note': {
+                this.sf2Sched.scheduleNow({
+                    type: 'channel',
+                    chan: info.chan,
+                    entry: {
+                        type: 'note-on',
+                        key: info.key,
+                        velocity: 100
+                    }
+                });
+                setTimeout(() => {
+                    this.sf2Sched.scheduleNow({
+                        type: 'channel',
+                        chan: info.chan,
+                        entry: {
+                            type: 'note-off',
+                            key: info.key
+                        }
+                    });
+                }, 500);
+                break;
+            }
+            case 'program-change': {
+                this.sf2Sched.scheduleNow({
+                    type: 'channel',
+                    chan: info.chan,
+                    entry: {
+                        type: 'program-change',
+                        pc: info.pc,
+                        isDrum: info.isDrum
+                    }
+                })
+            }
+        }
+    }
+
+    scheduleWithDelayWebMidi(data: number[], millis: number) {
+        this.wmSched.scheduleNowWithDelay(data, millis);
+    }
+}
+
+export const gTrackCoord = new TrackCoordinator();
+
+// response to backend change
+backendSelector.addEventListener('change', (ev) => {
+    gTrackCoord.stopAll();
+    const backend = (ev.target as HTMLSelectElement).value as any;
+    gTrackCoord.updateBackend(backend);
+    console.log(`backend changed to ${backend}`);
+});
 
 export class Track {
     private song: Song;
     private sched: any
-    private mSched: WebMIDIScheduler;
+    private trackCoord: TrackCoordinator;
     gainNode: GainNode
     notes: Note[];
     instrumentID: number
     instrument: InstrumentInfo
-    private trackNumber: number
-    // Program Change イベントを送信したか? (Web MIDIのみ)
-    private programChanged = false;
+    trackNumber: number
+    // Program Change イベントを送信したか? (Web MIDI, SF2のみ)
+    private programChanged = false; // FIXME: use me
     // response to backend change
-    private backend: "webaudio" | "webmidi";
+    private backend: BackendKind;
     volume: number = 90;
 
     constructor(instrumentID: number, song: Song, trackNumber: number) {
         this.song = song;
         // @ts-ignore
         this.sched = new WebAudioScheduler({ context: audioCtx });
-        this.mSched = new WebMIDIScheduler(50, gWebMidiPlayer);
         this.gainNode = audioCtx.createGain();
         this.setVolume(90);
         this.notes = [];
@@ -54,15 +261,20 @@ export class Track {
         // Program Change イベントを送信したか? (Web MIDIのみ)
         this.programChanged = false;
 
-        // response to backend change
-        this.backend = backendSelector.value as any;
-        backendSelector.addEventListener('change', (ev) => {
-            if (this.sched != null) this.sched.stop();
-            if (this.mSched != null) this.mSched.stop();
-            this.backend = (ev.target as HTMLSelectElement).value as any;
-            console.log(`backend changed to ${this.backend}`);
-        });
+        this.backend = DEFAULT_BACKEND;
+        this.trackCoord = gTrackCoord;
     }
+
+    updateBackend(backend: BackendKind) {
+        this.backend = backend;
+    }
+
+    stopWebAudio() {
+        if (this.sched != null) {
+            this.sched.stop();
+        }
+    }
+
     /**
      * Add a single note to the track
      * @param {Note} The note to add
@@ -102,12 +314,23 @@ export class Track {
      * may want to add startbeat as an instance variable or something and then have a setter function
      * @param {Number} beat The beat of the song to start at
      */
-    play(beat: number) {
+    play(beat: number): false | {
+        backend: 'webaudio'
+    } | {
+        backend: 'webmidi',
+        callback: (proxy: WebMIDISchedulerProxy) => void
+    } | {
+        backend: 'sf2',
+        notes: {
+            time: number,
+            entry: Entry
+        }[]
+    } {
         let startNote: number;
         if (beat != undefined) {
             startNote = this.findBeatIndex(beat);
             if (startNote == this.notes.length) {
-                return;
+                return false;
             }
             //offset = this.notes[startNote].beat - beat;
         }
@@ -123,17 +346,43 @@ export class Track {
 
         // this.playWithWebAudio(startNote, beat);
         //this.playWithWebMidi(startNote, beat);
-        this.playWithBackend(startNote, beat);
+        return this.playWithBackend(startNote, beat);
     }
 
-    playWithBackend(startNote: number, beat: number) {
+    playWithBackend(startNote: number, beat: number): {
+        backend: 'webaudio'
+    } | {
+        backend: 'webmidi',
+        callback: (proxy: WebMIDISchedulerProxy) => void
+    } | {
+        backend: 'sf2',
+        notes: {
+            time: number,
+            entry: Entry
+        }[]
+    } {
         switch (this.backend) {
-        case 'webaudio':
-            this.playWithWebAudio(startNote, beat);
-            break;
-        case 'webmidi':
-            this.playWithWebMidi(startNote, beat);
-            break;
+            case 'webaudio':
+                this.playWithWebAudio(startNote, beat);
+                return {
+                    backend: 'webaudio'
+                };
+            case 'webmidi': {
+                const callback = this.playWithWebMidi(startNote, beat);
+                return {
+                    backend: 'webmidi',
+                    callback: callback
+                };
+            }
+            case 'sf2': {
+                const entries = this.playWithSF2(startNote, beat);
+                return {
+                    backend: 'sf2',
+                    notes: entries
+                };
+            }
+            default:
+                throw new Error(`invalid backend: ${this.backend}`);
         }
     }
 
@@ -149,17 +398,17 @@ export class Track {
         this.sched.start(callback);
     }
 
-    playWithWebMidi(startNote: number, beat: number) {
+    playWithWebMidi(startNote: number, beat: number): (proxy: WebMIDISchedulerProxy) => void {
         /* Web MIDI 用のスケジューラ */
         const scheduledNotes: boolean[] = []; // ノートがスケジューリングされたか否か
-        for (let i=0; i<this.notes.length; i++) {
+        for (let i = 0; i < this.notes.length; i++) {
             scheduledNotes.push(false);
         }
         const callback = (proxy: WebMIDISchedulerProxy) => {
             const beatTime = 60.0 / this.song.tempo;
             const requestedDuration = proxy.requestDuration;
             const playbackTime = proxy.playbackTime;
-            for (let i=startNote; i<this.notes.length; i++) {
+            for (let i = startNote; i < this.notes.length; i++) {
                 // プレイバック開始からノート開始までの実時間 (millis)
                 const absoluteTime = beatTime * (this.notes[i].beat - beat) * 1000;
                 if (absoluteTime < playbackTime) {
@@ -190,11 +439,101 @@ export class Track {
             }
         };
         this.midiProgramChangeIfNeeded();
-        this.mSched.start(callback);
+
+        // set channel volume
+        const volumeBytes = [0xb0 | this.trackNumber, 0x07, this.volume];
+        this.trackCoord.scheduleNowWebMidi(volumeBytes);
+
+        // this.mSched.start(callback);
+        return callback;
+    }
+
+    private getPcAndIsDrum(): [number, boolean] {
+        let pc: number;
+        if (this.instrument.isDrum || this.instrument.programChange === null) {
+            pc = 0;
+        } else {
+            pc = this.instrument.programChange;
+        }
+        const isDrum = this.instrument.isDrum === undefined ? false : this.instrument.isDrum;
+        return [pc, isDrum];
+    }
+
+    playWithSF2(startNote: number, beat: number): {
+        time: number,
+        entry: Entry
+    }[] {
+        const entries: {
+            time: number,
+            entry: Entry
+        }[] = [];
+        const beatTime = 60.0 / this.song.tempo;
+
+        // program change
+        const [pc, isDrum] = this.getPcAndIsDrum();
+        entries.push({
+            time: 0,
+            entry: {
+                type: 'program-change',
+                pc: pc,
+                isDrum: isDrum
+            }
+        });
+
+        // set channel volume
+        entries.push({
+            time: 0,
+            entry: {
+                type: 'set-channel-volume',
+                volume: this.volume
+            }
+        });
+
+        for (const note of this.notes) {
+            // プレイバック開始からノート開始までの実時間 (millis)
+            const absoluteTime = beatTime * (note.beat - beat) * 1000;
+            if (absoluteTime < 0) {
+                continue;
+            }
+            // 実時間のノートの長さ (millis)
+            const absoluteDuration = beatTime * note.duration * 1000;
+
+            entries.push({
+                time: absoluteTime,
+                entry: {
+                    type: 'note-on',
+                    key: note.noteNumber,
+                    velocity: note.volume
+                }
+            });
+            entries.push({
+                time: absoluteTime + absoluteDuration,
+                entry: {
+                    type: 'note-off',
+                    key: note.noteNumber
+                }
+            });
+        }
+
+        entries.sort((a, b) =>
+            a.time - b.time
+        );
+        return entries;
     }
 
     playNote(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
-        this.playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber);
+        switch (this.backend) {
+            case 'webaudio':
+                this.playNoteWithWebAudio(noteNumber, beat, duration, volume, midiNoteNumber);
+                break;
+            case 'webmidi':
+                this.playNoteWithWebMidi(noteNumber, beat, duration, volume, midiNoteNumber);
+                break;
+            case 'sf2':
+                this.playNoteWithSf2(noteNumber, beat, duration, volume, midiNoteNumber);
+                break;
+        }
+
     }
 
     /**
@@ -218,12 +557,29 @@ export class Track {
     playMidiNote(noteNumber: number, duration: number, volume: number, freq: number) {
         this.midiProgramChangeIfNeeded();
         const ch = this.trackNumber;
-        const velocity = Math.floor(100*volume);
+        const velocity = Math.floor(100 * volume);
         const nn = this.mapMidiNoteNumber(freq, noteNumber);
         const noteOn = [0x90 | ch, nn, velocity];
         const noteOff = [0x80 | ch, nn, 0];
-        this.mSched.scheduleNow(noteOn);
-        this.mSched.scheduleNowWithDelay(noteOff, duration*1000);
+        this.trackCoord.scheduleNowWebMidi(noteOn);
+        this.trackCoord.scheduleWithDelayWebMidi(noteOff, duration * 1000);
+    }
+
+    playNoteWithSf2(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
+        if (this.programChanged) {
+            const [pc, isDrum] = this.getPcAndIsDrum();
+            this.trackCoord.scheduleNowSf2({
+                type: 'program-change',
+                chan: this.trackNumber,
+                pc: pc,
+                isDrum: isDrum
+            });
+        }
+        this.trackCoord.scheduleNowSf2({
+            type: 'note',
+            chan: this.trackNumber,
+            key: midiNoteNumber
+        });
     }
 
     mapMidiNoteNumber(freq: number, noteNumber: number) {
@@ -252,7 +608,7 @@ export class Track {
             volume: this.volume,
             notes: [],
         };
-        for(let i = 0; i < this.notes.length; i++){
+        for (let i = 0; i < this.notes.length; i++) {
             jsonobj.notes[i] = this.notes[i].getJSONObject();
         }
         return jsonobj;
@@ -268,7 +624,7 @@ export class Track {
         this.setVolume(jobj.volume);
 
         this.notes = [];
-        for(let i = 0; i < jobj.notes.length; i++){
+        for (let i = 0; i < jobj.notes.length; i++) {
             this.notes[i] = this.loadNoteJSONObject(jobj.notes[i]);
         }
     }
@@ -299,12 +655,8 @@ export class Track {
                 return;
             }
             const data = [0xc0 | this.trackNumber, pc];
-            this.mSched.scheduleNow(data);
+            this.trackCoord.scheduleNowWebMidi(data);
         }
-    }
-
-    resetBackend() {
-
     }
 }
 

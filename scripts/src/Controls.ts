@@ -75,11 +75,11 @@ export class Controls {
     addListeners() {
         var self = this;
         this.playButton.addEventListener('click', function () {
-            if(!isWebaudioContextResumed && audioCtx != null){
+            if (!isWebaudioContextResumed && audioCtx != null) {
                 audioCtx.resume();
                 setIsWebaudioContextResumed(true);
             }
-            self.sequencer.song.play(0);
+            self.sequencer.play(0);
         }, false);
 
         this.saveButton.addEventListener('click', function () {
@@ -121,23 +121,22 @@ export class Controls {
         }
     }
 
-    onTrackVolumeSliderChanged(){
+    onTrackVolumeSliderChanged() {
         this.sequencer.getCurrentTrack().setVolume(this.getTrackVolumeSliderValue());
     }
 
-    clearAllTrackFromSelector(){
+    clearAllTrackFromSelector() {
         var sl = this.tracksElement;
-        while(sl.lastChild)
-        {
+        while (sl.lastChild) {
             sl.removeChild(sl.lastChild);
         }
     }
 
-    setReleaseButtonState(is_on_release: boolean){
+    setReleaseButtonState(is_on_release: boolean) {
         this.releaseButton.disabled = is_on_release;
     }
 
-    onSongNameTextboxChanged(){
+    onSongNameTextboxChanged() {
         this.sequencer.song.name = this.getSongName();
     }
 
@@ -146,7 +145,7 @@ export class Controls {
 
         this.lengthWithoutPoint = length;
 
-        if(this.notePointCheckbox.checked) length *= 1.5;
+        if (this.notePointCheckbox.checked) length *= 1.5;
 
         let grid = this.sequencer.getCurrentGrid();
 
@@ -165,8 +164,8 @@ export class Controls {
         (element2 as any).style.border = "inset";
     }
 
-    registerInstruments(){
-        for(let i = 0; i < instrumentArray.length; i++){
+    registerInstruments() {
+        for (let i = 0; i < instrumentArray.length; i++) {
             let ins = instrumentArray[i];
             this.instrumentsElement.options[i] = new Option(ins.displayName, ins.displayName);
         }
@@ -182,7 +181,7 @@ export class Controls {
         textbox.val(song_name);
     }
 
-    getSongName(){
+    getSongName() {
         let textbox = $('#song-name-textbox');
         return textbox.val() as string;
     }
@@ -191,33 +190,33 @@ export class Controls {
         this.trackVolumeSlider.value = volume as any;
     }
 
-    setReadOnlyMode(){
+    setReadOnlyMode() {
         this.saveButton.disabled = true;
         this.releaseButton.disabled = true;
     }
 
-    setWriteMode(is_song_on_release: boolean){
+    setWriteMode(is_song_on_release: boolean) {
         this.saveButton.disabled = false;
         this.releaseButton.disabled = is_song_on_release;
     }
 
-    getTrackVolumeSliderValue(){
+    getTrackVolumeSliderValue() {
         return Number.parseInt(this.trackVolumeSlider.value);
     }
 
     //display message for *duration_ms* milliseconds
     //if duration_ms < 0, the message is not disappear
-    displayStatusMessage(message: string, duration_ms = DEFAULT_STATUS_MESSAGE_DURATION_MS){
+    displayStatusMessage(message: string, duration_ms = DEFAULT_STATUS_MESSAGE_DURATION_MS) {
         this.lastMessageID++;
         $('#status_text').text(message);
         //時間経過後にメッセージを消去する
         //(自分が一番新しいメッセージである場合のみ)
         //時間内に複数のメッセージが出されたときに後のメッセージが消されないようにする
         //duration_msが負の場合は消去しない
-        if(duration_ms >= 0){
-            let callback_cleartext = function(messageID: number){
+        if (duration_ms >= 0) {
+            let callback_cleartext = function (messageID: number) {
                 // @ts-ignore
-                if(messageID == this.lastMessageID){
+                if (messageID == this.lastMessageID) {
                     $('#status_text').text("");
                 }
             }.bind(this, this.lastMessageID);
