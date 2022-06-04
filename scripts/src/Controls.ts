@@ -116,8 +116,10 @@ export class Controls {
 
         };
 
-        for (var i = 0; i < this.noteLengthsElements.length; i++) {
-            this.noteLengthsElements[i].addEventListener('click', () => this.changeNoteLength(this.noteLengths[i], this.noteLengthsElements[i]), false);
+        for (let i = 0; i < this.noteLengthsElements.length; i++) {
+            let noteLength = this.noteLengths[i];
+            let noteLengthElement = this.noteLengthsElements[i];
+            this.noteLengthsElements[i].addEventListener('click', () => this.changeNoteLength(noteLength, noteLengthElement), false);
         }
     }
 

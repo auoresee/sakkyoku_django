@@ -73,6 +73,13 @@ export class SF2Player {
         this.audioCtx = null;
     }
 
+    async init(sampleRate: number) {
+        this.worker!.postMessage({
+            type: 'init-output',
+            sampleRate: sampleRate
+        });
+    }
+
     async uploadSong(playData: PlayData[]) {
         console.log(playData);
         this.worker!.postMessage({
@@ -114,10 +121,13 @@ export class SF2Player {
         gain.gain.value = 0.3;
         node.connect(gain);
         gain.connect(ctx.destination);
+        
+        let sample_rate = ctx.sampleRate;
 
         this.worker!.postMessage({
             type: 'pass-port',
-            port: node.port
+            port: node.port,
+            sampleRate: sample_rate
         }, [node.port]);
     }
 

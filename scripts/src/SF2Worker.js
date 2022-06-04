@@ -15,17 +15,18 @@ let scheduledEntries; // ノートが処理されたか否か
 
 let currentTime = 0;
 let nextEntry = 0;
-let SampleRate = 48000;
-
 
 let Module;
 
 function loadSf2() {
     load_sf2 = Module.cwrap('load_sf2', 'number', ['string']);
     sf2 = load_sf2("FluidR3_GM.sf2");
+}
 
-    init_output = Module.cwrap('init_output', null, ['number']);
-    init_output(sf2);
+//initialize audio output with given sample rate
+function initAudioOutput(sampleRate) {
+    init_output = Module.cwrap('init_output', null, ['number', 'number']);
+    init_output(sf2, sampleRate);
 }
 
 function noteOn(chan, key, vel) {
@@ -91,7 +92,8 @@ function stepNote(dt) {
     }
     const requestedDuration = dt * 1000;
     const playbackTime = currentTime;
-    for (let i = nextEntry; i < song.length; i++) {
+    let i;
+    for (i = nextEntry; i < song.length; i++) {
         const entryMeta = song[i];
         // プレイバック開始からノート開始までの実時間 (millis)
         const absoluteTime = entryMeta.time;
@@ -146,6 +148,7 @@ function stepNote(dt) {
 
 importScripts("tfs.js");
 createTFS().then((module) => {
+
     Module = module;
     loadSf2();
     postMessage({
@@ -159,6 +162,10 @@ onmessage = (ev) => {
 
     switch (data.type) {
         case 'pass-port':
+            //サンプリングレートを受け取る
+            console.log("Sample rate: "+data.sampleRate);
+            SampleRate = data.sampleRate;
+            initAudioOutput(SampleRate);
             audioPort = data.port;
             console.log('received audioPort');
 
@@ -179,6 +186,9 @@ onmessage = (ev) => {
             return;
         case 'upload-song':
             song = data.song; // PlayData[]
+            scheduledEntries = undefined;
+            nextEntry = 0;
+            currentTime = 0;
             break;
     }
 

@@ -86,7 +86,7 @@ DATABASES = {
         'NAME': 'noverdi',  # 　作成したデータベース名
         'USER': 'noverdi',  # ログインユーザー名
         'PASSWORD': mysqlpassword.SQL_PASSWORD,
-        'HOST': 'db',
+        'HOST': '',
         'PORT': '',
     }
 }

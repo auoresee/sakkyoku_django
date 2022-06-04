@@ -13,9 +13,9 @@ tsf *load_sf2(const char *filename)
 }
 
 EMSCRIPTEN_KEEPALIVE
-void init_output(tsf *f)
+void init_output(tsf *f, int sample_rate)
 {
-    tsf_set_output(f, TSF_STEREO_UNWEAVED, 48000, 0);
+    tsf_set_output(f, TSF_STEREO_UNWEAVED, sample_rate, 0);
 }
 
 EMSCRIPTEN_KEEPALIVE

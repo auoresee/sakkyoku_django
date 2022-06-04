@@ -187,6 +187,28 @@ function calculateFrequency(noteNumber: number): number {
     return result;
 }
 
+//純正律(テスト用)
+function calculateFrequencyJust(noteNumber: number, tonic: number = 0): number {
+    const c4 = 60;
+    let c4rel = noteNumber - c4;
+    let tonic4rel = c4rel - tonic;
+    let octave = Math.floor(tonic4rel / 12.0);
+    let octavemul = (1 << (octave + 10)) / 1024.0;
+    let key = (tonic4rel + 120) % 12;    //floor remainder
+
+    let ratio = [1, 10/9, 9/8, 6/5, 5/4, 4/3, 25/18, 3/2, 8/5, 5/3, 16/9, 15/8];
+
+    let freq = [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88];
+
+    let tonicfreq = freq[tonic];
+
+    let result = ratio[key] * tonicfreq * octavemul;
+    /*if(sequencer != null && sequencer.song.songID == 20) {
+        $("#status-text").append(""+result+"<br>");
+    }*/
+    return result;
+}
+
 export function loadSoundFiles(){
     soundManager.loadSound("piano_A4", "sound/piano_A4.wav");
     soundManager.loadSound("RockOrgan_A4", "sound/RockOrgan_A4.wav");

@@ -528,7 +528,11 @@ export class Grid {
             case 'right':
                 this.deleteNoteIndices(this.grabbingNote.note);
                 this.deleteNoteFromTrack(this.grabbingNote.note);
-                this.grabbingNote.note.length = qx - this.grabbingNote.note.x;
+                let new_length = qx - this.grabbingNote.note.x;
+                if(new_length < this.currentSmallestPixelBeatIncrement){
+                    new_length = this.currentSmallestPixelBeatIncrement;
+                }
+                this.grabbingNote.note.length = new_length;
                 this.addNoteIndices(this.grabbingNote.note);
                 this.addNoteToTrack(this.grabbingNote.note, this.currentNoteVelocity)
                 this.drawNotes();
