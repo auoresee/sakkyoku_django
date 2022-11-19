@@ -14,7 +14,7 @@ from pathlib import Path
 
 from . import mysqlpassword
 from . import secretkey
-from _env import DEPLOYMENT_ENVIRONMENT, DeploymentEnvironment, DEPLOY_DOMAIN_NAME, DEPLOY_IP
+from . import _env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,16 +26,16 @@ SECRET_KEY = secretkey.SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-if DEPLOYMENT_ENVIRONMENT == DeploymentEnvironment.PRODUCTION:
+if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
     DEBUG = False
 else:
     DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
-if DEPLOYMENT_ENVIRONMENT == DeploymentEnvironment.PRODUCTION:
-    ALLOWED_HOSTS.append(DEPLOY_DOMAIN_NAME)
-    ALLOWED_HOSTS.append(DEPLOY_IP)
+if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
+    ALLOWED_HOSTS.append(_env.DEPLOY_DOMAIN_NAME)
+    ALLOWED_HOSTS.append(_env.DEPLOY_IP)
 
 
 # Application definition

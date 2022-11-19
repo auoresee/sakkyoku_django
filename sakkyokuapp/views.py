@@ -11,13 +11,13 @@ from django.views import generic
 from .models import *
 from .songmanager import SongManager
 
-from _env import DeploymentEnvironment, DEPLOYMENT_ENVIRONMENT, VIEW_BASE_DIR
+from . import _env
 
 # Create your views here.
 
 def set_cur_dir():
-    if(DEPLOYMENT_ENVIRONMENT != DeploymentEnvironment.DEVELOPMENT):
-        os.chdir(VIEW_BASE_DIR)
+    if(_env.DEPLOYMENT_ENVIRONMENT != _env.DeploymentEnvironment.DEVELOPMENT):
+        os.chdir(_env.VIEW_BASE_DIR)
 
 def top_page(request):
     set_cur_dir()
