@@ -20,9 +20,11 @@ def set_cur_dir():
         os.chdir(VIEW_BASE_DIR)
 
 def top_page(request):
+    set_cur_dir()
     return render(request, 'sakkyokuapp/index.html')
 
 def sequencer_page(request):
+    set_cur_dir()
     return render(request, 'sakkyokuapp/sequencer.html')
 
 """class IndexView(generic.ListView):
@@ -73,6 +75,7 @@ def json_serial(obj):
     raise TypeError ("Type %s not serializable" % type(obj))
 
 def api_get_song(request, song_id):
+    set_cur_dir()
     songjson = SongManager.get_song(song_id)
     resjson = '{ "song": '+songjson+' }'
     return HttpResponse(resjson)
@@ -91,6 +94,7 @@ def register_user():
     return user_id
 
 def api_save_song(request):
+    set_cur_dir()
     songManager = SongManager()
     songjson = request.POST['json']
     s_user_id = request.session.get('userID', 0)
@@ -101,6 +105,7 @@ def api_save_song(request):
     return HttpResponse(res)
 
 def api_import_midi(request):
+    set_cur_dir()
     songManager = SongManager()
     print(request.POST)
     mididata = request.FILES['mididata']
