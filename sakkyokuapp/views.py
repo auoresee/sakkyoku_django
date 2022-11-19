@@ -107,8 +107,11 @@ def api_save_song(request):
 def api_import_midi(request):
     set_cur_dir()
     songManager = SongManager()
-    print(request.POST)
-    mididata = request.FILES['mididata']
+    #print(request.POST)
+    try:
+        mididata = request.FILES['mididata']
+    except:
+        return HttpResponse('!MIDIファイルが指定されていません。')
     s_user_id = request.session.get('userID', 0)
     if(s_user_id == 0 or s_user_id == None):
         s_user_id = register_user()
