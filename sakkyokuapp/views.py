@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import date, datetime
 
 from django.http import HttpResponseRedirect
@@ -7,11 +8,16 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views import generic
 
-
 from .models import *
 from .songmanager import SongManager
 
+from _env import DeploymentEnvironment, DEPLOYMENT_ENVIRONMENT, VIEW_BASE_DIR
+
 # Create your views here.
+
+def set_cur_dir():
+    if(DEPLOYMENT_ENVIRONMENT != DeploymentEnvironment.DEVELOPMENT):
+        os.chdir(VIEW_BASE_DIR)
 
 def top_page(request):
     return render(request, 'sakkyokuapp/index.html')
