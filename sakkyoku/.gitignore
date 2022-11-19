@@ -1,3 +1,4 @@
 mysqlpassword.py
 secretkey.py
 _env_prod.py
+__pycache__/
