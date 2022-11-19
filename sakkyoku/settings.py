@@ -15,6 +15,7 @@ from pathlib import Path
 from . import mysqlpassword
 from . import secretkey
 from . import _env
+from . import _env_prod
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,8 +35,8 @@ else:
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
-    ALLOWED_HOSTS.append(_env.DEPLOY_DOMAIN_NAME)
-    ALLOWED_HOSTS.append(_env.DEPLOY_IP)
+    ALLOWED_HOSTS.append(_env_prod.ENV_DOMAIN_NAME)
+    ALLOWED_HOSTS.append(_env_prod.ENV_DEPLOY_IP)
 
 
 # Application definition
