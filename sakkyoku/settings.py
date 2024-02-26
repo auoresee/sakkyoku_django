@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
+import mimetypes
 from pathlib import Path
 
 from . import mysqlpassword
@@ -31,6 +32,7 @@ if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
     DEBUG = False
 else:
     DEBUG = True
+    mimetypes.add_type("application/wasm", ".wasm", True)
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -148,3 +150,12 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
+    INSTALLED_APPS += ['sslserver']
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CERT_ROOT = BASE_DIR / '.well-known'
+    CERT_URL = '/.well-known/'

@@ -86,25 +86,32 @@ cs.extend(ea)
 cs.extend(eb)
 cs.extend(e7)"""
 
-cs.extend(canon)
+"""cs.extend(canon)
 cs.extend(canon)
 cs.extend(["F", "G7", "Em7", "Am7", "F", "G7", "Em7", "Am7"])
 cs.extend(["F", "G7", "Em7", "Am7", "Dm", "Em", "F", "G"])
 cs.extend(kmr)
-cs.extend(kmr)
+cs.extend(kmr)"""
 
+cs.extend(["F", "F", "F", "F", "C7", "C7", "A7", "A7"])
+cs.extend(["Dm", "Dm", "C7", "F", "G7", "G7", "C7", "C7"])
+cs.extend(["F", "F", "F", "F", "C7", "C7", "A7", "A7"])
+cs.extend(["Dm", "Dm", "C7", "F", "G7", "G7", "C7", "C7"])
 
 chords = []
 
+chord_len = LEN_HALF
+
 for i in range(0, len(cs)):
     root, type, bass = separateChordName(cs[i])
-    chords.append(Chord(root, type=type, bass=bass, tick=i * LEN_HALF))
+    chords.append(Chord(root, type=type, bass=bass, tick=i * chord_len))
 
 prog = ChordProgression(chords)
 
 gg = GuitarGenerator(prog)
 #gg.mode = 'power'
-gg.velocity_pattern = '332'
+#gg.velocity_pattern = '332'
+gg.velocity_pattern = 'const'
 
 notes = gg.generateSimple8Beat()
 
@@ -142,4 +149,4 @@ mid.tracks.append(track10)
 track10.append(Message('program_change', time=0, channel=9, program=0))
 addNotesToTrack(track10, notes10, 9, LEN_QUARTER)
 
-mid.save('new_song2.mid')
+mid.save('new_song3.mid')
