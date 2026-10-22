@@ -67,7 +67,10 @@ class SongManager:
 
     
     def checkSongValid(self, song):
-        # stub
+        #曲名は文字列でDBの最大長以内に限る(HTMLとしては扱わず、表示側でテキストとして挿入する)
+        name = song.get('name')
+        if(not isinstance(name, str) or len(name) > Song._meta.get_field('name').max_length):
+            return False
         return True
 
     def getAvailableSongID(self):
@@ -149,7 +152,7 @@ class SongManager:
 
         self.store_song(song, is_new)
 
-        return json.dumps(song)
+        return song
 
     #曲ファイルの内容をDBに再登録する(管理用)
     def register_song(self, song):

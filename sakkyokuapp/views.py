@@ -2,7 +2,7 @@ import json
 import os
 from datetime import date, datetime
 
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -62,23 +62,12 @@ def api_get_song_list(request):
         "songs": song_dicts
     }
 
-    resjson = json.dumps(jsonobj, default=json_serial)
-
-    return HttpResponse(resjson)
-
-# date, datetimeの変換関数
-def json_serial(obj):
-    # 日付型の場合には、文字列に変換します
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    # 上記以外はサポート対象外.
-    raise TypeError ("Type %s not serializable" % type(obj))
+    return JsonResponse(jsonobj)
 
 def api_get_song(request, song_id):
     set_cur_dir()
     songjson = SongManager.get_song(song_id)
-    resjson = '{ "song": '+songjson+' }'
-    return HttpResponse(resjson)
+    return JsonResponse({"song": json.loads(songjson)})
 
 def getAvailableUserID():
     id = User.objects.count() + 1       #ID 0 は使用しない
@@ -108,7 +97,7 @@ def api_save_song(request):
         res = songManager.save_song(songjson, s_user_id)
     except SongError as e:
         return song_error_response(e)
-    return HttpResponse(res)
+    return JsonResponse(res)
 
 def api_import_midi(request):
     set_cur_dir()
@@ -127,4 +116,4 @@ def api_import_midi(request):
         res = songManager.generateSongFromMIDI(mididata)
     except SongError as e:
         return song_error_response(e)
-    return HttpResponse(res)
+    return JsonResponse(res)

@@ -92,21 +92,28 @@ class IndexMain {
     }
 
     setSongListToHTML(song_list: Song[], mode: number){
-        let html = "";
-        song_list.forEach((element: Song) => {
-            html += this.generateSongListRowHTML(element);
-        });
-
+        let list: JQuery<HTMLElement>;
         if(mode == SONGLIST_TOP){
-            $("#top_song_list").html(html);
+            list = $("#top_song_list");
         }
         else if(mode == SONGLIST_MY){
-            $("#my_song_list").html(html);
+            list = $("#my_song_list");
         }
+        else{
+            return;
+        }
+
+        list.empty();
+        song_list.forEach((element: Song) => {
+            list.append(this.generateSongListRow(element), $('<br>'));
+        });
     }
 
-    generateSongListRowHTML(row: Song){
-        return '<a href="sequencer.html?song_id=' + row.songID + '">' + row.name + '</a><br>\n';
+    //曲名はHTMLとして解釈させないよう、テキストとして設定する
+    generateSongListRow(row: Song){
+        return $('<a>')
+            .attr('href', 'sequencer.html?song_id=' + encodeURIComponent(String(row.songID)))
+            .text(row.name);
     }
 }
 
