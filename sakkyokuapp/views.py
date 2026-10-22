@@ -166,7 +166,7 @@ def api_import_midi(request):
     songManager = SongManager()
     mididata = request.FILES.get('mididata')
     if(mididata is None):
-        return HttpResponse('!MIDIファイルが指定されていません。')
+        return HttpResponse('!MIDIファイルが指定されていません。', status=400, content_type="text/plain; charset=utf-8")
     try:
         if(mididata.size > MAX_MIDI_FILE_SIZE):
             raise SongError("The MIDI file is too large", 413)

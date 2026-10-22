@@ -182,7 +182,10 @@ class SongManager:
 
     #MIDIデータからsongデータを作成
     def generateSongFromMIDI(self, mididata):
-        channels = midi2channels(mididata)
+        try:
+            channels = midi2channels(mididata)
+        except MIDIDecodeError:
+            raise SongError("Invalid MIDI file")
         songdata = SongData()
         songdata.loadSMFChannels(channels)
         return self.normalize_song(songdata.as_dict())

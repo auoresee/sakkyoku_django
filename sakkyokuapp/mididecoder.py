@@ -1,5 +1,9 @@
 import io
 import mido
+from mido.midifiles.meta import KeySignatureError
+
+class MIDIDecodeError(Exception):
+    pass
 
 class SMFChannel:
     def __init__(self, id=-1, initial_instrument=None):
@@ -23,7 +27,10 @@ class SMFNote:
 # MIDIファイルから各チャンネルのノートを取得
 def midi2channels(filedata: str):
     #binstream = io.BytesIO(filedata)        #バイナリストリームを作成
-    file = mido.MidiFile(file=filedata)
+    try:
+        file = mido.MidiFile(file=filedata)
+    except (OSError, EOFError, ValueError, LookupError, KeySignatureError) as e:     #MIDIファイルとして読めない
+        raise MIDIDecodeError(str(e)) from e
     #ticks_per_beat = file.ticks_per_beat
     #abs_time_tick_msec = tempo / ticks_per_beat / 1000.0
     channels = [SMFChannel(i) for i in range(16)]
