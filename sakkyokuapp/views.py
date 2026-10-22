@@ -2,6 +2,8 @@ import json
 import os
 from datetime import date, datetime
 
+from django.conf import settings
+from django.core.cache import cache
 from django.http import HttpResponseRedirect, JsonResponse
 from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -36,6 +38,13 @@ def sequencer_page(request):
     #    return Question.objects.order_by('-pub_date')[:5]
 
 SONGLIST_MAX_NUM = 100
+
+#新しい曲(MIDIのインポートを含む)の作成数の上限
+#接続元ごとの数はプロセスごとのキャッシュで数えるため、複数プロセスで動かす場合は CACHES を共有のキャッシュにする
+SONG_CREATION_LIMIT = 30                #接続元ごとに SONG_CREATION_LIMIT_PERIOD 秒あたり
+SONG_CREATION_LIMIT_PERIOD = 60 * 60
+MAX_SONGS_PER_USER = 300
+MAX_MIDI_FILE_SIZE = 1024 * 1024
 
 def song_error_response(e):
     return HttpResponse("!error: " + str(e), status=e.status, content_type="text/plain; charset=utf-8")
@@ -107,18 +116,47 @@ def register_user():
     User.objects.create(userID=user_id)
     return user_id
 
+#前段のプロキシを信頼する構成(HTTPS_MODE が proxy)では、プロキシが X-Forwarded-For の末尾に追加した接続元を使う
+def get_client_ip(request):
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if(getattr(settings, 'HTTPS_MODE', None) == 'proxy' and forwarded):
+        return forwarded.split(',')[-1].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+def check_song_creation_limit(request, s_user_id):
+    if(s_user_id and Song.objects.filter(userID=s_user_id).count() >= MAX_SONGS_PER_USER):
+        raise SongError("This user has too many songs", 403)
+    key = 'song-creation:' + get_client_ip(request)
+    cache.add(key, 0, SONG_CREATION_LIMIT_PERIOD)
+    try:
+        count = cache.incr(key)
+    except ValueError:      #期限切れで消えた場合
+        cache.set(key, 1, SONG_CREATION_LIMIT_PERIOD)
+        count = 1
+    if(count > SONG_CREATION_LIMIT):
+        raise SongError("Too many songs have been created. Please try again later", 429)
+
+#新しい曲を保存する。利用者は、検証を通った新しい曲を初めて保存するときに作成する
+def save_new_song(request, songManager, song, s_user_id):
+    check_song_creation_limit(request, s_user_id)
+    if(not s_user_id):
+        s_user_id = register_user()
+        request.session['userID'] = s_user_id
+    return songManager.save_song(song, s_user_id)
+
 def api_save_song(request):
     set_cur_dir()
     songManager = SongManager()
     songjson = request.POST.get('json')
     if(songjson is None):
         return song_error_response(SongError("Invalid song data"))
-    s_user_id = request.session.get('userID', 0)
-    if(s_user_id == 0 or s_user_id == None):
-        s_user_id = register_user()
-        request.session['userID'] = s_user_id
+    s_user_id = get_session_user_id(request)
     try:
-        res = songManager.save_song(songjson, s_user_id)
+        song = songManager.parse_song(songjson)
+        if(song['songID'] == 0):
+            res = save_new_song(request, songManager, song, s_user_id)
+        else:
+            res = songManager.save_song(song, s_user_id)
     except SongError as e:
         return song_error_response(e)
     return JsonResponse(res)
@@ -126,18 +164,14 @@ def api_save_song(request):
 def api_import_midi(request):
     set_cur_dir()
     songManager = SongManager()
-    #print(request.POST)
-    try:
-        mididata = request.FILES['mididata']
-    except:
+    mididata = request.FILES.get('mididata')
+    if(mididata is None):
         return HttpResponse('!MIDIファイルが指定されていません。')
-    s_user_id = request.session.get('userID', 0)
-    if(s_user_id == 0 or s_user_id == None):
-        s_user_id = register_user()
-        request.session['userID'] = s_user_id
-    songManager.s_user_id = s_user_id
     try:
-        res = songManager.generateSongFromMIDI(mididata)
+        if(mididata.size > MAX_MIDI_FILE_SIZE):
+            raise SongError("The MIDI file is too large", 413)
+        song = songManager.generateSongFromMIDI(mididata)
+        res = save_new_song(request, songManager, song, get_session_user_id(request))
     except SongError as e:
         return song_error_response(e)
     return JsonResponse(res)

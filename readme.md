@@ -4,11 +4,13 @@ docker-compose build
 docker-compose up -d
 別途 nginx などを設定して、443番ポート(HTTPS)を http://127.0.0.1:5200 に転送するようにする。
 アプリは本番設定(DEBUG無効、HTTPSへのリダイレクト、Secure Cookie、HSTS)で起動するため、
-プロキシでは Host と X-Forwarded-Proto を必ず設定する。
+プロキシでは Host、X-Forwarded-Proto、X-Forwarded-For を必ず設定する。
 ```
 proxy_set_header Host $host;
 proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
+X-Forwarded-For が無いと全ての利用者が同じ接続元として扱われ、下記の作成数の上限を共有してしまう。
 アプリのポートは 127.0.0.1:5200、DBのポートは 127.0.0.1:5201 にのみ公開される。
 (docker-compose.yml では SAKKYOKU_HTTPS=proxy を指定している。下記「本番のHTTPS設定」を参照)
 
@@ -24,6 +26,15 @@ proxy_set_header X-Forwarded-Proto $scheme;
 - off: HTTPSを使わない (非推奨)
 
 構成と合わない値にすると、HTTPSへのリダイレクトがループしたり、ログインや曲の保存ができなくなる。
+
+# 曲の作成数・サイズの上限
+sakkyokuapp/views.py の定数で設定している。
+- 新しい曲(MIDIのインポートを含む)は、接続元ごとに1時間あたり30曲まで。数はプロセスごとのキャッシュで数えるため、
+  gunicorn などを複数プロセスで動かす場合は settings.py の CACHES を共有のキャッシュ(DBやRedisなど)にする
+- 1人の利用者が持てる曲は300曲まで
+- インポートできるMIDIファイルは1MBまで
+
+アプリ側の上限に加えて、プロキシでもリクエストの大きさと頻度を制限する (nginx の client_max_body_size や limit_req)。
 
 # デプロイ方法 (手動, 開発時)
 1. djangoをインストール

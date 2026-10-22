@@ -165,8 +165,21 @@ class SongManager:
         channels = midi2channels(mididata)
         songdata = SongData()
         songdata.loadSMFChannels(channels)
-        songjson = json.dumps(songdata.as_dict())
-        return self.save_song(songjson, self.s_user_id)
+        return self.normalize_song(songdata.as_dict())
+
+    #JSON文字列を曲データとして読み込み、検証する
+    def parse_song(self, song_json):
+        try:
+            song = json.loads(song_json)
+        except (ValueError, RecursionError):
+            raise SongError("Invalid song data")
+        return self.normalize_song(song)
+
+    #ファイルやDBに触れる前に、全ての入力を検証する
+    def normalize_song(self, song):
+        if(not self.checkSongValid(song)):
+            raise SongError("Invalid song data")
+        return {key: song[key] for key in SONG_KEYS if key in song}
 
     def timestamp_to_datetime(self, timestamp):
         return make_aware(datetime.fromtimestamp(timestamp // 1000))
@@ -204,19 +217,8 @@ class SongManager:
             if os.path.exists(tmpname):
                 os.remove(tmpname)
 
-    def save_song(self, song_json, s_user_id):
-        try:
-            song = json.loads(song_json)
-        except (ValueError, RecursionError):
-            raise SongError("Invalid song data")
-
-        self.s_user_id = s_user_id
-
-        #ファイルやDBに触れる前に、全ての入力を検証する
-        if(not self.checkSongValid(song)):
-            raise SongError("Invalid song data")
-        song = {key: song[key] for key in SONG_KEYS if key in song}
-
+    #song は parse_song / generateSongFromMIDI で検証済みの曲データ
+    def save_song(self, song, s_user_id):
         #曲IDと所有者はサーバー側で決め、既存の曲はDB上の所有者とセッションを照合する
         is_new = (song['songID'] == 0)
         if(is_new):
@@ -225,7 +227,7 @@ class SongManager:
             songentry = Song.objects.filter(songID=song['songID']).first()
             if(songentry is None):
                 raise SongError("The song does not exist", 404)
-            if(songentry.userID != s_user_id):		#when one tried to overwrite another user's song
+            if(not s_user_id or songentry.userID != s_user_id):		#when one tried to overwrite another user's song
                 raise SongError("This user is not the original author", 403)
         song['userID'] = s_user_id
 
