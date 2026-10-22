@@ -36,11 +36,14 @@ class SongManager:
         pass
 
     #returns: Song[]
-    def get_song_list(targetUserID, release, sort, num, offset):
+    def get_song_list(targetUserID, release, sort, num, offset, only_released=True):
         songs = Song.objects
 
         if(targetUserID != -1):
             songs = songs.filter(userID=targetUserID)
+
+        if(only_released):
+            songs = songs.filter(isOnRelease=True)
 
         if(release == SongManager.SONGLIST_RELEASE_TRUE):
             songs = songs.filter(isOnRelease=True)
@@ -64,6 +67,16 @@ class SongManager:
             song = f.read()
 
         return song
+
+    #非公開曲は所有者本人にだけ返す。存在を明かさないよう、どちらの場合も404にする
+    def get_visible_song(song_id, s_user_id):
+        songentry = Song.objects.filter(songID=song_id).first()
+        if(songentry is None or not (songentry.isOnRelease or (s_user_id and songentry.userID == s_user_id))):
+            raise SongError("The song does not exist", 404)
+        try:
+            return SongManager.get_song(song_id)
+        except FileNotFoundError:
+            raise SongError("The song does not exist", 404)
 
     
     def checkSongValid(self, song):

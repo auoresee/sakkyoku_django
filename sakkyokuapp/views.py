@@ -35,24 +35,46 @@ def sequencer_page(request):
     #    """Return the last five published questions."""
     #    return Question.objects.order_by('-pub_date')[:5]
 
-def api_get_song_list(request):
-    target = int(request.GET.get('target'))
-    targetUserID = -1
+SONGLIST_MAX_NUM = 100
 
+def song_error_response(e):
+    return HttpResponse("!error: " + str(e), status=e.status, content_type="text/plain; charset=utf-8")
+
+def get_session_user_id(request):
+    return request.session.get('userID') or 0
+
+def api_get_song_list(request):
+    s_user_id = get_session_user_id(request)
+    try:
+        target = int(request.GET.get('target'))
+        release = int(request.GET.get('release'))
+        sort = int(request.GET.get('sort'))
+        num = int(request.GET.get('num'))
+        offset = int(request.GET.get('offset'))
+        if(target == SongManager.SONGLIST_TARGET_SPECIFIED_USER):
+            specifiedUserID = int(request.GET.get('userID'))
+    except (TypeError, ValueError):
+        return song_error_response(SongError("Invalid parameters"))
+    if(not (0 < num <= SONGLIST_MAX_NUM) or offset < 0):
+        return song_error_response(SongError("Invalid parameters"))
+
+    #非公開曲は所有者本人の一覧にだけ含める
     if(target == SongManager.SONGLIST_TARGET_ALL):
         targetUserID = -1
+        only_released = True
     elif(target == SongManager.SONGLIST_TARGET_MY):
-        targetUserID = request.session.get('userID', 0)
-        if(targetUserID == None): targetUserID = 0
+        targetUserID = s_user_id
+        only_released = False
     elif(target == SongManager.SONGLIST_TARGET_SPECIFIED_USER):
-        targetUserID = request.query.userID
+        targetUserID = specifiedUserID
+        only_released = (targetUserID != s_user_id)
+    else:
+        return song_error_response(SongError("Invalid parameters"))
 
-    release = int(request.GET.get('release'))
-    sort = int(request.GET.get('sort'))
-    num = int(request.GET.get('num'))
-    offset = int(request.GET.get('offset'))
-
-    songs = SongManager.get_song_list(targetUserID, release, sort, num, offset)
+    if(targetUserID == 0):      #セッションのない利用者の曲は無い
+        songs = []
+    else:
+        songs = SongManager.get_song_list(targetUserID, release, sort, num, offset, only_released)
 
     song_dicts = []
     for song in songs:
@@ -66,7 +88,10 @@ def api_get_song_list(request):
 
 def api_get_song(request, song_id):
     set_cur_dir()
-    songjson = SongManager.get_song(song_id)
+    try:
+        songjson = SongManager.get_visible_song(song_id, get_session_user_id(request))
+    except SongError as e:
+        return song_error_response(e)
     return JsonResponse({"song": json.loads(songjson)})
 
 def getAvailableUserID():
@@ -81,9 +106,6 @@ def register_user():
     user_id = getAvailableUserID()
     User.objects.create(userID=user_id)
     return user_id
-
-def song_error_response(e):
-    return HttpResponse("!error: " + str(e), status=e.status, content_type="text/plain; charset=utf-8")
 
 def api_save_song(request):
     set_cur_dir()
