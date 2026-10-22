@@ -4,15 +4,17 @@ services:
     image: mariadb:latest
     environment:
       - MARIADB_USER=noverdi
-      - MARIADB_PASSWORD=noverdi
-      - MARIADB_ROOT_PASSWORD=noverdi
+      - MARIADB_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD in .env}
       - MARIADB_DATABASE=noverdi
     ports:
-      - "5201:3306"
+      - "127.0.0.1:5201:3306"
     volumes:
       - "dbdata:/var/lib/mysql"
   web:
     build: ./
+    environment:
+      - SAKKYOKU_SQL_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
     ports:
       - "5200:8000"
     depends_on:

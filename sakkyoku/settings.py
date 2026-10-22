@@ -10,9 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
-from . import mysqlpassword
+from django.core.exceptions import ImproperlyConfigured
+
 from . import secretkey
 from . import _env
 from . import _env_prod
@@ -86,6 +88,16 @@ WSGI_APPLICATION = 'sakkyoku.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
+# DBのパスワードは環境変数 SAKKYOKU_SQL_PASSWORD から読み込む。未設定なら mysqlpassword.py を使う
+SQL_PASSWORD = os.environ.get('SAKKYOKU_SQL_PASSWORD', '')
+if not SQL_PASSWORD:
+    try:
+        from .mysqlpassword import SQL_PASSWORD
+    except ImportError:
+        pass
+if not SQL_PASSWORD or SQL_PASSWORD == 'sql password here':
+    raise ImproperlyConfigured('Set the DB password in SAKKYOKU_SQL_PASSWORD or sakkyoku/mysqlpassword.py')
+
 DATABASES = {
     # 'default': {
     #     'ENGINE': 'django.db.backends.sqlite3',
@@ -95,7 +107,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'noverdi',  # 　作成したデータベース名
         'USER': 'noverdi',  # ログインユーザー名
-        'PASSWORD': mysqlpassword.SQL_PASSWORD,
+        'PASSWORD': SQL_PASSWORD,
         'HOST': '',
         'PORT': '',
     }
