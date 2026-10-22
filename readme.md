@@ -10,9 +10,20 @@ proxy_set_header Host $host;
 proxy_set_header X-Forwarded-Proto $scheme;
 ```
 アプリのポートは 127.0.0.1:5200、DBのポートは 127.0.0.1:5201 にのみ公開される。
+(docker-compose.yml では SAKKYOKU_HTTPS=proxy を指定している。下記「本番のHTTPS設定」を参照)
 
 .env のパスワードがDBに反映されるのは、DBのボリュームを初めて作るときだけ。
 既存のボリュームのパスワードを変える場合は、DBに接続して ALTER USER で変更してから .env を合わせる。
+
+# 本番のHTTPS設定
+本番 (DEPLOY_ENV=production、wsgi.py 経由で起動した場合の既定) では、HTTPSの受け方を
+環境変数 SAKKYOKU_HTTPS か sakkyoku/_env_prod.py の ENV_HTTPS で指定する。未指定では起動しない。
+- proxy: nginx などのリバースプロキシでTLSを終端する。プロキシで Host と X-Forwarded-Proto を設定し、
+  アプリのポートにはプロキシ以外から接続できないようにする
+- direct: WSGIサーバー自身がHTTPSで受ける (Apache + mod_wsgi でTLSを扱う場合など)
+- off: HTTPSを使わない (非推奨)
+
+構成と合わない値にすると、HTTPSへのリダイレクトがループしたり、ログインや曲の保存ができなくなる。
 
 # デプロイ方法 (手動, 開発時)
 1. djangoをインストール

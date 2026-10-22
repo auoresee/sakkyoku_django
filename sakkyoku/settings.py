@@ -45,14 +45,22 @@ if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
     ALLOWED_HOSTS.append(_env_prod.ENV_DOMAIN_NAME)
     ALLOWED_HOSTS.append(_env_prod.ENV_DEPLOY_IP)
 
-# 本番はHTTPSで配信する。前段のリバースプロキシでTLSを終端する場合は
-# SAKKYOKU_SECURE_PROXY_SSL_HEADER=1 とし、プロキシで X-Forwarded-Proto を設定(上書き)すること
+# 本番のHTTPSの受け方を SAKKYOKU_HTTPS (未設定なら _env_prod.py の ENV_HTTPS) で指定する
+#   proxy:  前段のリバースプロキシでTLSを終端し、プロキシが X-Forwarded-Proto を設定(上書き)する
+#   direct: WSGIサーバー自身がHTTPSで受ける (Apache + mod_wsgi でTLSを扱う場合など)
+#   off:    HTTPSを使わない (非推奨。Secure Cookie、HTTPSへのリダイレクト、HSTSを無効にする)
+# 実際の構成と合わないとリダイレクトのループやCookieの不達が起きるため、未指定では起動しない
+HTTPS_MODES = ('proxy', 'direct', 'off')
 if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_SECONDS = int(os.environ.get('SAKKYOKU_SECURE_HSTS_SECONDS', '3600'))
-    if os.environ.get('SAKKYOKU_SECURE_PROXY_SSL_HEADER') == '1':
+    HTTPS_MODE = os.environ.get('SAKKYOKU_HTTPS') or getattr(_env_prod, 'ENV_HTTPS', '')
+    if HTTPS_MODE not in HTTPS_MODES:
+        raise ImproperlyConfigured('Set SAKKYOKU_HTTPS (or ENV_HTTPS in sakkyoku/_env_prod.py) to one of: ' + ', '.join(HTTPS_MODES))
+    if HTTPS_MODE != 'off':
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
+        SECURE_SSL_REDIRECT = True
+        SECURE_HSTS_SECONDS = int(os.environ.get('SAKKYOKU_SECURE_HSTS_SECONDS', '3600'))
+    if HTTPS_MODE == 'proxy':
         SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
