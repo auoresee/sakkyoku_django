@@ -3,6 +3,7 @@ import math
 import os
 import re
 import tempfile
+import time
 from datetime import datetime
 from django.db import IntegrityError, transaction
 from django.db.models import Max
@@ -205,6 +206,9 @@ class SongManager:
     def timestamp_to_datetime(self, timestamp):
         return make_aware(datetime.fromtimestamp(timestamp // 1000))
 
+    def datetime_to_timestamp(self, date):
+        return int(date.timestamp()) * 1000
+
     #譜面データ(tracks, tempo)はDBに保存しない
     def make_song_entry(self, song):
         return Song(
@@ -244,6 +248,7 @@ class SongManager:
         is_new = (song['songID'] == 0)
         if(is_new):
             song['songID'] = self.getAvailableSongID()
+            songentry = None
         else:
             songentry = Song.objects.filter(songID=song['songID']).first()
             if(songentry is None):
@@ -251,6 +256,17 @@ class SongManager:
             if(not s_user_id or songentry.userID != s_user_id):		#when one tried to overwrite another user's song
                 raise SongError("This user is not the original author", 403)
         song['userID'] = s_user_id
+
+        #日時もクライアントの値は使わず、サーバーの時刻と保存済みの値から決める(DBに合わせて秒単位)
+        now = int(time.time()) * 1000
+        song['createdDate'] = now if is_new else self.datetime_to_timestamp(songentry.createdDate)
+        song['lastUpdatedDate'] = now
+        if(not song['isOnRelease']):
+            song['releasedDate'] = NOT_RELEASED_DATE
+        elif(songentry is not None and songentry.isOnRelease):
+            song['releasedDate'] = self.datetime_to_timestamp(songentry.releasedDate)
+        else:
+            song['releasedDate'] = now
 
         self.store_song(song, is_new)
 
