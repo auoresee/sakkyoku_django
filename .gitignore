@@ -2,4 +2,7 @@
 /sakkyoku/secretkey.py
 __pycache__/
 /.env
+#ローカル環境のショートカット
+*.lnk
+*.url
 /local/

@@ -1,2 +1,4 @@
-songs/
+#曲ファイルは利用者のデータなのでコミットしない(ディレクトリだけ残す)
+songs/*
+!songs/.gitkeep
 __pycache__/
