@@ -619,7 +619,8 @@ export class Track {
     }
 
     loadJSONObject(jobj: TrackJSON) {
-        this.instrumentID = instrumentNameToID[jobj.instrument];
+        //知らない楽器名の曲でも読み込めるよう、最初の楽器に置き換える
+        this.instrumentID = Object.prototype.hasOwnProperty.call(instrumentNameToID, jobj.instrument) ? instrumentNameToID[jobj.instrument] : 0;
         this.instrument = instrumentArray[this.instrumentID];
         this.setVolume(jobj.volume);
 

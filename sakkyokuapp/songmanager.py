@@ -19,6 +19,16 @@ SONG_DIR = "sakkyokuapp/songs"
 SONG_FILENAME_PATTERN = re.compile(r'^([0-9]+)\.song$')
 SONG_KEYS = ('name', 'tempo', 'tracks', 'songID', 'userID', 'isOnRelease', 'createdDate', 'releasedDate', 'lastUpdatedDate')
 
+#曲データの値の範囲と規模の上限。公開曲は他の利用者のブラウザで読み込まれるため、クライアントが扱える範囲に限る
+INSTRUMENT_NAMES = ('Piano', 'RockOrgan', 'FingerBass', 'Percussion', 'Strings',      #instruments.ts の instrumentArray の name
+                    'SopranoSax', 'ODGuitar', 'EPiano2', 'SquareLead', 'SynthBell')
+MIN_TEMPO = 30
+MAX_TEMPO = 1000
+MAX_MIDI_VALUE = 127            #音高、ベロシティ、トラックの音量
+MAX_BEAT = 100000               #ノートの位置と長さ(拍)
+MAX_TRACKS = 16                 #MIDIのチャンネル数
+MAX_NOTES = 20000               #曲全体。保存時のリクエストの上限(2.5MB)に収まる程度
+
 class SongError(Exception):
     def __init__(self, message, status=400):
         super().__init__(message)
@@ -32,6 +42,9 @@ def is_number(value):
 
 def is_timestamp(value):
     return is_number(value) and 0 <= value < MAX_TIMESTAMP
+
+def is_in_range(value, low, high):
+    return is_number(value) and low <= value <= high
 
 #曲ファイルの絶対パスを返す。曲IDは正の整数に限り、解決後のパスが保存先の外になる場合もエラーにする
 def get_song_filepath(song_id):
@@ -125,7 +138,7 @@ class SongManager:
             return False
         if(not is_int(song.get('userID')) or song['userID'] < 0):
             return False
-        if(not isinstance(song.get('isOnRelease'), bool) or not is_number(song.get('tempo'))):
+        if(not isinstance(song.get('isOnRelease'), bool) or not is_in_range(song.get('tempo'), MIN_TEMPO, MAX_TEMPO)):
             return False
         if(not is_timestamp(song.get('createdDate')) or not is_timestamp(song.get('lastUpdatedDate'))):
             return False
@@ -136,10 +149,13 @@ class SongManager:
         if(not isinstance(tracks, list)):
             return False
         for track in tracks:
-            if(not isinstance(track, dict) or not isinstance(track.get('instrument'), str)):
+            if(not isinstance(track, dict) or track.get('instrument') not in INSTRUMENT_NAMES):
                 return False
+            #音量は数値か、音量スライダーの値の文字列
             volume = track.get('volume')
-            if(not is_number(volume) and not (isinstance(volume, str) and volume.isdecimal() and len(volume) <= 3)):
+            if(isinstance(volume, str) and volume.isdecimal() and len(volume) <= 3):
+                volume = int(volume)
+            if(not is_in_range(volume, 0, MAX_MIDI_VALUE)):
                 return False
             notes = track.get('notes')
             if(not isinstance(notes, list)):
@@ -147,9 +163,12 @@ class SongManager:
             for note in notes:
                 if(not isinstance(note, dict)):
                     return False
-                for key in ('noteNumber', 'beat', 'duration', 'velocity'):
-                    if(not is_number(note.get(key))):
-                        return False
+                if(not is_int(note.get('noteNumber')) or not is_in_range(note['noteNumber'], 0, MAX_MIDI_VALUE)):
+                    return False
+                if(not is_in_range(note.get('velocity'), 0, MAX_MIDI_VALUE)):
+                    return False
+                if(not is_in_range(note.get('beat'), 0, MAX_BEAT) or not is_in_range(note.get('duration'), 0, MAX_BEAT)):
+                    return False
         return True
 
     def getAvailableSongID(self):
@@ -179,6 +198,8 @@ class SongManager:
     def normalize_song(self, song):
         if(not self.checkSongValid(song)):
             raise SongError("Invalid song data")
+        if(len(song['tracks']) > MAX_TRACKS or sum(len(track['notes']) for track in song['tracks']) > MAX_NOTES):
+            raise SongError("The song has too many tracks or notes")
         return {key: song[key] for key in SONG_KEYS if key in song}
 
     def timestamp_to_datetime(self, timestamp):
