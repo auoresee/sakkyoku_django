@@ -12,8 +12,8 @@ docker-compose up -d
 4. settings.py の DATABASE の HOST を変える (localhost にDBがあるなら '' でよい)
 5. python3 manage.py makemigrations
 6. python3 manage.py migrate
-7. サーバーを起動し、データベースを構築する
-   /admin/db/にアクセスし、SQLパスワードを入力
+7. 曲ファイルからデータベースを構築する
+        python3 manage.py reconstruct_db
 8. Typescript ファイルをビルドする
 ```bash
 cd scripts
