@@ -183,7 +183,7 @@ export class Sequencer {
             {
                 url: UPLOAD_URL,
                 type: 'POST',
-                data: "json=" + jsondata,
+                data: { json: jsondata },       //jQueryにフォーム形式でURLエンコードさせる
                 beforeSend: function (xhr, settings) {
                     xhr.setRequestHeader("X-CSRFToken", csrf_token);
                 },
