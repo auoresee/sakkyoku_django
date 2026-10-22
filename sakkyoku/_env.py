@@ -2,6 +2,8 @@ import os
 
 from enum import Enum
 
+from django.core.exceptions import ImproperlyConfigured
+
 class DeploymentEnvironment(Enum):
     PRODUCTION = 'prod'
     DEVELOPMENT = 'dev'
@@ -26,4 +28,6 @@ for deploy_env in DeploymentEnvironment:
         DEPLOYMENT_ENVIRONMENT = deploy_env
         break
 else:
-    DEPLOYMENT_ENVIRONMENT = DeploymentEnvironment.DEVELOPMENT
+    # 未設定・不正な値のまま開発環境(DEBUG有効)として起動しないよう、エラーにする
+    raise ImproperlyConfigured('Set %s to one of: %s' % (
+        DEPLOY_ENV_VAR_NAME, ', '.join(sorted(set().union(*DEPLOYMENT_ENVIRONMENT_REPRESENTATIONS.values())))))

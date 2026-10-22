@@ -15,30 +15,45 @@ from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
-from . import secretkey
 from . import _env
 from . import _env_prod
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = secretkey.SECRET_KEY
+# 秘密鍵は環境変数 SAKKYOKU_SECRET_KEY から読み込む。未設定なら secretkey.py を使う
+SECRET_KEY = os.environ.get('SAKKYOKU_SECRET_KEY', '')
+if not SECRET_KEY:
+    try:
+        from .secretkey import SECRET_KEY
+    except ImportError:
+        pass
+if not SECRET_KEY or SECRET_KEY == 'secret key here':
+    raise ImproperlyConfigured('Set the secret key in SAKKYOKU_SECRET_KEY or sakkyoku/secretkey.py')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
-    DEBUG = False
-else:
-    DEBUG = True
+# DEBUGは開発環境でだけ有効にする
+DEBUG = _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.DEVELOPMENT
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
     ALLOWED_HOSTS.append(_env_prod.ENV_DOMAIN_NAME)
     ALLOWED_HOSTS.append(_env_prod.ENV_DEPLOY_IP)
+
+# 本番はHTTPSで配信する。前段のリバースプロキシでTLSを終端する場合は
+# SAKKYOKU_SECURE_PROXY_SSL_HEADER=1 とし、プロキシで X-Forwarded-Proto を設定(上書き)すること
+if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = int(os.environ.get('SAKKYOKU_SECURE_HSTS_SECONDS', '3600'))
+    if os.environ.get('SAKKYOKU_SECURE_PROXY_SSL_HEADER') == '1':
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition

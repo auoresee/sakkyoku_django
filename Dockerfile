@@ -29,6 +29,4 @@ COPY start.sh ./
 COPY --from=js /home/node/app/dist ./sakkyokuapp/static/sakkyokuapp/javascript/
 COPY --from=em /usr/src/app/build ./sakkyokuapp/static/sakkyokuapp/javascript/
 
-RUN sed "s/secret key here/ao40a34jjiojj09j0wjbksljq/" ./sakkyoku/secretkey_.py > ./sakkyoku/secretkey.py
-
 CMD ["sh", "start.sh"]
