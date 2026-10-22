@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.views import generic
 
 from .models import *
-from .songmanager import SongManager
+from .songmanager import SongError, SongManager
 
 from . import _env
 
@@ -93,6 +93,9 @@ def register_user():
     User.objects.create(userID=user_id)
     return user_id
 
+def song_error_response(e):
+    return HttpResponse("!error: " + str(e), status=e.status, content_type="text/plain; charset=utf-8")
+
 def api_save_song(request):
     set_cur_dir()
     songManager = SongManager()
@@ -101,7 +104,10 @@ def api_save_song(request):
     if(s_user_id == 0 or s_user_id == None):
         s_user_id = register_user()
         request.session['userID'] = s_user_id
-    res = songManager.save_song(songjson, s_user_id)
+    try:
+        res = songManager.save_song(songjson, s_user_id)
+    except SongError as e:
+        return song_error_response(e)
     return HttpResponse(res)
 
 def api_import_midi(request):
@@ -117,5 +123,8 @@ def api_import_midi(request):
         s_user_id = register_user()
         request.session['userID'] = s_user_id
     songManager.s_user_id = s_user_id
-    res = songManager.generateSongFromMIDI(mididata)
+    try:
+        res = songManager.generateSongFromMIDI(mididata)
+    except SongError as e:
+        return song_error_response(e)
     return HttpResponse(res)

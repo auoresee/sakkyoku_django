@@ -1,4 +1,5 @@
 from django.db import models
+import json
 import os
 import glob
 
@@ -31,7 +32,7 @@ def reconstruct_db(request):
         splitarr = file.split('.')
         id = int(splitarr[0])
         songjson = SongManager.get_song(id)
-        sm.save_song(songjson, None)
+        sm.register_song(json.loads(songjson))
 
     return HttpResponse(str(files))
         

@@ -1,12 +1,22 @@
 import json
 import os
 import glob
+import tempfile
 from datetime import datetime
+from django.db import IntegrityError, transaction
+from django.db.models import Max
 from django.utils.timezone import make_aware
 from .mididecoder import *
 
 from .models import Song
 from .songdata import SongData
+
+NOT_RELEASED_DATE = int(datetime(2000, 1, 1).timestamp()) * 1000
+
+class SongError(Exception):
+    def __init__(self, message, status=400):
+        super().__init__(message)
+        self.status = status
 
 class SongManager:
     SONGLIST_RELEASE_ANY = 1		#no matter whether released
@@ -64,7 +74,7 @@ class SongManager:
         os.chdir("sakkyokuapp/songs")
         files = glob.glob("*.song")
         os.chdir("../../")
-        maxid = 0
+        maxid = Song.objects.aggregate(Max('songID'))['songID__max'] or 0
         for val in files:
             splitarr = val.split('.')
             id = int(splitarr[0])
@@ -81,58 +91,66 @@ class SongManager:
         songjson = json.dumps(songdata.as_dict())
         return self.save_song(songjson, self.s_user_id)
 
-    def setIDtoSong(self, song):
-        if(song['userID'] == 0):
-            song['userID'] = self.s_user_id
-        if(song['songID'] == 0):
-            song['songID'] = self.getAvailableSongID()
+    def timestamp_to_datetime(self, timestamp):
+        return make_aware(datetime.fromtimestamp(timestamp // 1000))
 
-    def write_song(self, song):
-        songjson = json.dumps(song)
+    #譜面データ(tracks, tempo)はDBに保存しない
+    def make_song_entry(self, song):
+        return Song(
+            songID=song['songID'],
+            userID=song['userID'],
+            name=song['name'],
+            isOnRelease=song['isOnRelease'],
+            createdDate=self.timestamp_to_datetime(song['createdDate']),
+            releasedDate=self.timestamp_to_datetime(song.get('releasedDate', NOT_RELEASED_DATE)),
+            lastUpdatedDate=self.timestamp_to_datetime(song['lastUpdatedDate']),
+        )
+
+    #一時ファイルに書き込んでからDBを保存し、DBの保存に成功した場合だけファイルを差し替える
+    def store_song(self, song, is_new):
         filename = "sakkyokuapp/songs/" + str(song['songID']) + ".song"
-        with open(filename, 'w', encoding='UTF-8') as f:
-            f.write(songjson)
+        try:
+            fd, tmpname = tempfile.mkstemp(dir="sakkyokuapp/songs", prefix=".", suffix=".tmp")
+        except OSError:
+            raise SongError("Failed to write the song", 500)
+        try:
+            with os.fdopen(fd, 'w', encoding='UTF-8') as f:
+                f.write(json.dumps(song))
+            with transaction.atomic():
+                self.make_song_entry(song).save(force_insert=is_new)
+                os.replace(tmpname, filename)
+        except IntegrityError:
+            raise SongError("Failed to allocate a song ID. Please try again", 409)
+        except OSError:
+            raise SongError("Failed to write the song", 500)
+        finally:
+            if os.path.exists(tmpname):
+                os.remove(tmpname)
 
     def save_song(self, song_json, s_user_id):
         song = json.loads(song_json)
 
         self.s_user_id = s_user_id
-	
-        if (s_user_id != None):
-            if (song['userID'] == 0):
-                song['userID'] = s_user_id
-            if (song['userID'] != s_user_id):		#when one tried to overwrite another user's song
-                return "!error: This user is not the original author"
 
-            if(not self.checkSongValid(song)):
-                return "!error: Invalid song data"
-        
-        self.setIDtoSong(song)
+        if(not self.checkSongValid(song)):
+            raise SongError("Invalid song data")
 
-        songcopyjson = json.dumps(song)
+        #曲IDと所有者はサーバー側で決め、既存の曲はDB上の所有者とセッションを照合する
+        is_new = (song['songID'] == 0)
+        if(is_new):
+            song['songID'] = self.getAvailableSongID()
+        else:
+            songentry = Song.objects.filter(songID=song['songID']).first()
+            if(songentry is None):
+                raise SongError("The song does not exist", 404)
+            if(songentry.userID != s_user_id):		#when one tried to overwrite another user's song
+                raise SongError("This user is not the original author", 403)
+        song['userID'] = s_user_id
 
-        try:
-            self.write_song(song)
-        except OSError as e:
-            return "!error: Failed to write the song"
+        self.store_song(song, is_new)
 
-        del song['tracks']       #譜面データはDBに保存しない
-        del song['tempo']
+        return json.dumps(song)
 
-        #Song.objects.update_or_create(**song)
-
-        song['createdDate'] = str(make_aware(datetime.fromtimestamp(song['createdDate'] // 1000)))
-        if('releasedDate' in song):
-            song['releasedDate'] = str(make_aware(datetime.fromtimestamp(song['releasedDate'] // 1000)))
-        song['lastUpdatedDate'] = str(make_aware(datetime.fromtimestamp(song['lastUpdatedDate'] // 1000)))
-
-        songentry = Song(**song)
-        
-        songentry.save()
-        
-        #if(self.checkSongExistsInDB(song.songID)):
-        #    self.addSongToDB(song)
-        #else:
-        #    self.updateSongInDB(song)
-
-        return songcopyjson
+    #曲ファイルの内容をDBに再登録する(管理用)
+    def register_song(self, song):
+        self.make_song_entry(song).save()
