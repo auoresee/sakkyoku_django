@@ -1,6 +1,7 @@
 import json
+import math
 import os
-import glob
+import re
 import tempfile
 from datetime import datetime
 from django.db import IntegrityError, transaction
@@ -12,11 +13,44 @@ from .models import Song
 from .songdata import SongData
 
 NOT_RELEASED_DATE = int(datetime(2000, 1, 1).timestamp()) * 1000
+MAX_TIMESTAMP = int(datetime(9999, 1, 1).timestamp()) * 1000
+
+SONG_DIR = "sakkyokuapp/songs"
+SONG_FILENAME_PATTERN = re.compile(r'^([0-9]+)\.song$')
+SONG_KEYS = ('name', 'tempo', 'tracks', 'songID', 'userID', 'isOnRelease', 'createdDate', 'releasedDate', 'lastUpdatedDate')
 
 class SongError(Exception):
     def __init__(self, message, status=400):
         super().__init__(message)
         self.status = status
+
+def is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+def is_number(value):
+    return (is_int(value) or isinstance(value, float)) and math.isfinite(value)
+
+def is_timestamp(value):
+    return is_number(value) and 0 <= value < MAX_TIMESTAMP
+
+#曲ファイルの絶対パスを返す。曲IDは正の整数に限り、解決後のパスが保存先の外になる場合もエラーにする
+def get_song_filepath(song_id):
+    if(not is_int(song_id) or song_id <= 0):
+        raise SongError("Invalid song ID")
+    song_dir = os.path.realpath(SONG_DIR)
+    filepath = os.path.realpath(os.path.join(song_dir, str(song_id) + ".song"))
+    if(os.path.dirname(filepath) != song_dir):
+        raise SongError("Invalid song ID")
+    return filepath
+
+#保存されている曲ファイルの曲IDの一覧
+def list_song_ids():
+    ids = []
+    for filename in os.listdir(os.path.realpath(SONG_DIR)):
+        match = SONG_FILENAME_PATTERN.match(filename)
+        if(match):
+            ids.append(int(match.group(1)))
+    return ids
 
 class SongManager:
     SONGLIST_RELEASE_ANY = 1		#no matter whether released
@@ -61,7 +95,7 @@ class SongManager:
 
     
     def get_song(song_id):
-        filepath = "sakkyokuapp/songs/"+str(song_id)+".song"
+        filepath = get_song_filepath(song_id)
         
         with open(filepath, "r") as f:
             song = f.read()
@@ -80,20 +114,47 @@ class SongManager:
 
     
     def checkSongValid(self, song):
+        if(not isinstance(song, dict)):
+            return False
         #曲名は文字列でDBの最大長以内に限る(HTMLとしては扱わず、表示側でテキストとして挿入する)
         name = song.get('name')
         if(not isinstance(name, str) or len(name) > Song._meta.get_field('name').max_length):
             return False
+        #曲IDは保存済みの曲を表す正の整数か、新規作成を表す0に限る
+        if(not is_int(song.get('songID')) or song['songID'] < 0):
+            return False
+        if(not is_int(song.get('userID')) or song['userID'] < 0):
+            return False
+        if(not isinstance(song.get('isOnRelease'), bool) or not is_number(song.get('tempo'))):
+            return False
+        if(not is_timestamp(song.get('createdDate')) or not is_timestamp(song.get('lastUpdatedDate'))):
+            return False
+        if('releasedDate' in song and not is_timestamp(song['releasedDate'])):
+            return False
+
+        tracks = song.get('tracks')
+        if(not isinstance(tracks, list)):
+            return False
+        for track in tracks:
+            if(not isinstance(track, dict) or not isinstance(track.get('instrument'), str)):
+                return False
+            volume = track.get('volume')
+            if(not is_number(volume) and not (isinstance(volume, str) and volume.isdecimal() and len(volume) <= 3)):
+                return False
+            notes = track.get('notes')
+            if(not isinstance(notes, list)):
+                return False
+            for note in notes:
+                if(not isinstance(note, dict)):
+                    return False
+                for key in ('noteNumber', 'beat', 'duration', 'velocity'):
+                    if(not is_number(note.get(key))):
+                        return False
         return True
 
     def getAvailableSongID(self):
-        os.chdir("sakkyokuapp/songs")
-        files = glob.glob("*.song")
-        os.chdir("../../")
         maxid = Song.objects.aggregate(Max('songID'))['songID__max'] or 0
-        for val in files:
-            splitarr = val.split('.')
-            id = int(splitarr[0])
+        for id in list_song_ids():
             if(id > maxid):
                 maxid = id
         
@@ -124,9 +185,9 @@ class SongManager:
 
     #一時ファイルに書き込んでからDBを保存し、DBの保存に成功した場合だけファイルを差し替える
     def store_song(self, song, is_new):
-        filename = "sakkyokuapp/songs/" + str(song['songID']) + ".song"
+        filename = get_song_filepath(song['songID'])
         try:
-            fd, tmpname = tempfile.mkstemp(dir="sakkyokuapp/songs", prefix=".", suffix=".tmp")
+            fd, tmpname = tempfile.mkstemp(dir=os.path.dirname(filename), prefix=".", suffix=".tmp")
         except OSError:
             raise SongError("Failed to write the song", 500)
         try:
@@ -144,12 +205,17 @@ class SongManager:
                 os.remove(tmpname)
 
     def save_song(self, song_json, s_user_id):
-        song = json.loads(song_json)
+        try:
+            song = json.loads(song_json)
+        except (ValueError, RecursionError):
+            raise SongError("Invalid song data")
 
         self.s_user_id = s_user_id
 
+        #ファイルやDBに触れる前に、全ての入力を検証する
         if(not self.checkSongValid(song)):
             raise SongError("Invalid song data")
+        song = {key: song[key] for key in SONG_KEYS if key in song}
 
         #曲IDと所有者はサーバー側で決め、既存の曲はDB上の所有者とセッションを照合する
         is_new = (song['songID'] == 0)
@@ -169,4 +235,6 @@ class SongManager:
 
     #曲ファイルの内容をDBに再登録する(管理用)
     def register_song(self, song):
+        if(not self.checkSongValid(song) or song['songID'] == 0):
+            raise SongError("Invalid song data")
         self.make_song_entry(song).save()

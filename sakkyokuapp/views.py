@@ -110,7 +110,9 @@ def register_user():
 def api_save_song(request):
     set_cur_dir()
     songManager = SongManager()
-    songjson = request.POST['json']
+    songjson = request.POST.get('json')
+    if(songjson is None):
+        return song_error_response(SongError("Invalid song data"))
     s_user_id = request.session.get('userID', 0)
     if(s_user_id == 0 or s_user_id == None):
         s_user_id = register_user()
