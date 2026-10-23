@@ -58,14 +58,14 @@ services:
       - "./sakkyokuapp/static/sakkyokuapp/javascript:/usr/src/app/sakkyokuapp/static/sakkyokuapp/javascript"
 
   # 音源(WASM)のビルド。音源を scripts/sf2js/ に置いてから docker compose run --rm wasm で実行する
-  # 音源のファイル名は .env の SAKKYOKU_SF2 で指定する (既定は FluidR3_GM.sf2)
+  # 音源のファイル名は .env の SAKKYOKU_SF2 で指定する (既定は soundfont.sf2)
   wasm:
     image: emscripten/emsdk:6.0.12
     profiles: ["tools"]
     <<: *host-user
     working_dir: /src/scripts/sf2js
     environment:
-      - SF2=${SAKKYOKU_SF2:-FluidR3_GM.sf2}
+      - SF2=${SAKKYOKU_SF2:-soundfont.sf2}
     # 音源を替えたときも作り直すよう、毎回ビルドする (-B)
     command: sh -c "make -B wasm && cp tfs.js tfs.wasm tfs.data ../../sakkyokuapp/static/sakkyokuapp/javascript/"
     volumes:

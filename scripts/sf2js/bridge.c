@@ -96,7 +96,7 @@ void *random_note_on(void *ptr)
 
 // int main()
 // {
-//     SoundFont = load_sf2("FluidR3_GM.sf2");
+//     SoundFont = load_sf2("soundfont.sf2");
 //     init_output(SoundFont);
 
 //     int major, minor;
