@@ -65,11 +65,13 @@ export type InstantOutputType = {
 export class SF2Player {
     private worker: Worker | null;
     private ready: boolean;
+    private preparing: Promise<void> | null;
     private audioCtx: AudioContext | null;
 
     constructor() {
         this.worker = null;
         this.ready = false;
+        this.preparing = null;
         this.audioCtx = null;
     }
 
@@ -88,17 +90,39 @@ export class SF2Player {
         });
     }
 
+    //準備中にもう一度呼ばれても(ノートの入力時は続けて呼ばれる)、Worker とオーディオの準備は一度だけ行う
     async prepareAsync(): Promise<void> {
         if (this.ready) return;
-        await this.prepareWorker();
-        await this.prepareAudio();
+        if (this.preparing === null) {
+            const preparing = this.prepare();
+            this.preparing = preparing;
+            preparing.finally(() => {
+                if (this.preparing === preparing) {
+                    this.preparing = null;
+                }
+            });
+        }
+        return this.preparing;
+    }
+
+    private async prepare(): Promise<void> {
+        const worker = this.createWorker();
+        await this.waitForWorkerLoaded(worker);
+        if (this.worker !== worker) return;     //準備中に stop() された
+        await this.prepareAudio(worker);
+        if (this.worker !== worker) return;
         this.ready = true;
     }
 
-    private async prepareWorker(): Promise<void> {
+    private createWorker(): Worker {
         this.worker = new Worker(new URL('./SF2Worker.js', import.meta.url));
+        return this.worker;
+    }
+
+    //Worker が音源を読み込み終えるのを待つ。読み込む前にメッセージを送ると Worker 側で失敗する
+    private waitForWorkerLoaded(worker: Worker): Promise<void> {
         return new Promise((resolve) => {
-            this.worker!.onmessage = ((ev) => {
+            worker.onmessage = ((ev) => {
                 switch (ev.data.type) {
                     case 'finish-loading':
                         resolve();
@@ -108,7 +132,7 @@ export class SF2Player {
         });
     }
 
-    private async prepareAudio() {
+    private async prepareAudio(worker: Worker) {
         if (this.audioCtx !== null) {
             console.warn('audio context already exists');
             return;
@@ -124,7 +148,7 @@ export class SF2Player {
         
         let sample_rate = ctx.sampleRate;
 
-        this.worker!.postMessage({
+        worker.postMessage({
             type: 'pass-port',
             port: node.port,
             sampleRate: sample_rate
@@ -165,10 +189,13 @@ export class SF2Player {
         console.log('closing SF2Player');
         this.worker?.terminate();
         this.worker = null;
+        this.preparing = null;      //読み込み中に止めた Worker の準備は待たない
 
-        await this.audioCtx?.close();
+        //閉じ終わる前に次の準備が始まっても新しい AudioContext を作れるよう、先に参照を外す
+        const audioCtx = this.audioCtx;
         this.audioCtx = null;
-
         this.ready = false;
+
+        await audioCtx?.close();
     }
 }
