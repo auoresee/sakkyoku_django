@@ -4,8 +4,9 @@
 SF2 ?= soundfont.sf2
 
 # emcc は1回で tfs.js、tfs.wasm、tfs.data を作る
+# SF2Worker.js が使う _malloc / _free と HEAPU8 は、新しい Emscripten では既定で公開されないため明示する
 tfs.js: bridge.c $(SF2) Makefile
-	emcc -o tfs.js bridge.c --preload-file $(SF2)@soundfont.sf2 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_RUNTIME_METHODS='["cwrap"]' -s MODULARIZE=1 -s EXPORT_NAME="createTFS"
+	emcc -o tfs.js bridge.c --preload-file $(SF2)@soundfont.sf2 -s ALLOW_MEMORY_GROWTH=1 -s EXPORTED_FUNCTIONS='["_malloc","_free"]' -s EXPORTED_RUNTIME_METHODS='["cwrap","HEAPU8"]' -s MODULARIZE=1 -s EXPORT_NAME="createTFS"
 
 tfs.wasm tfs.data: tfs.js
 
