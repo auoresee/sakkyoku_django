@@ -146,8 +146,9 @@ DATABASES = {
         'NAME': 'noverdi',  # 　作成したデータベース名
         'USER': 'noverdi',  # ログインユーザー名
         'PASSWORD': SQL_PASSWORD,
-        'HOST': '',
-        'PORT': '',
+        # 接続先は SAKKYOKU_DB_HOST / SAKKYOKU_DB_PORT で指定する(Docker では db)。未設定なら同じマシンのDB
+        'HOST': os.environ.get('SAKKYOKU_DB_HOST', ''),
+        'PORT': os.environ.get('SAKKYOKU_DB_PORT', ''),
     }
 }
 

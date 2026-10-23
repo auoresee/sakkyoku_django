@@ -11,11 +11,18 @@ services:
       - "127.0.0.1:5201:3306"
     volumes:
       - "dbdata:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
   web:
     build: ./
     environment:
       - DEPLOY_ENV=production
       - SAKKYOKU_VIEW_BASE_DIR=/usr/src/app
+      - SAKKYOKU_DB_HOST=db
       - SAKKYOKU_SQL_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
       - SAKKYOKU_SECRET_KEY=${SAKKYOKU_SECRET_KEY:?Set SAKKYOKU_SECRET_KEY in .env}
       - SAKKYOKU_HTTPS=proxy
@@ -23,6 +30,7 @@ services:
     ports:
       - "127.0.0.1:5200:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 volumes:
   dbdata:

@@ -42,7 +42,7 @@ sakkyokuapp/views.py の定数で設定している。
         python3 manage.py createsuperuser
 3. mysqlpassword_.pyにパスワードを入力し、mysqlpassword.pyにファイル名を変更する (環境変数 SAKKYOKU_SQL_PASSWORD でもよい)
 4. secretkey_.pyに秘密鍵を入力し、secretkey.pyに変更 (環境変数 SAKKYOKU_SECRET_KEY でもよい)
-4. settings.py の DATABASE の HOST を変える (localhost にDBがあるなら '' でよい)
+4. DBが別のマシンにある場合は、環境変数 SAKKYOKU_DB_HOST (と SAKKYOKU_DB_PORT) で接続先を指定する (同じマシンなら不要)
 5. python3 manage.py makemigrations
 6. python3 manage.py migrate
 7. 曲ファイルからデータベースを構築する

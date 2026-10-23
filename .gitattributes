@@ -1,0 +1,2 @@
+# シェルスクリプトはコンテナ(Linux)で実行するため、Windows で取り出しても LF にする
+*.sh text eol=lf
