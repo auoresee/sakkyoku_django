@@ -1,7 +1,14 @@
-version: '3'
+# 開発環境。使い方は readme.md の「開発環境 (Docker)」を参照
+# 本番用 (将来 Docker で運用する場合) は docker-compose.prod.yml
+name: sakkyoku-dev
+
+x-host-user: &host-user
+  # ホストと共有するファイルを、ホストの利用者の権限で作る (Linux では .env に id -u / id -g の値を設定する)
+  user: "${SAKKYOKU_UID:-1000}:${SAKKYOKU_GID:-1000}"
+
 services:
   db:
-    image: mariadb:latest
+    image: mariadb:11.4
     environment:
       - MARIADB_USER=noverdi
       - MARIADB_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
@@ -17,20 +24,48 @@ services:
       timeout: 5s
       retries: 30
       start_period: 30s
+
+  # Django の開発サーバー (http://localhost:8000)。ソースの変更は自動で反映される
   web:
-    build: ./
+    build:
+      context: .
+      target: dev
+    <<: *host-user
     environment:
-      - DEPLOY_ENV=production
-      - SAKKYOKU_VIEW_BASE_DIR=/usr/src/app
+      - DEPLOY_ENV=dev
       - SAKKYOKU_DB_HOST=db
       - SAKKYOKU_SQL_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
       - SAKKYOKU_SECRET_KEY=${SAKKYOKU_SECRET_KEY:?Set SAKKYOKU_SECRET_KEY in .env}
-      - SAKKYOKU_HTTPS=proxy
-      - SAKKYOKU_SECURE_HSTS_SECONDS=${SAKKYOKU_SECURE_HSTS_SECONDS:-3600}
     ports:
-      - "127.0.0.1:5200:8000"
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ".:/usr/src/app"
     depends_on:
       db:
         condition: service_healthy
+
+  # TypeScript を監視してビルドし、sakkyokuapp/static/sakkyokuapp/javascript/ に出力する
+  js:
+    image: node:24-alpine
+    <<: *host-user
+    working_dir: /usr/src/app/scripts
+    environment:
+      - npm_config_cache=/tmp/.npm
+      - WATCHPACK_POLLING=true
+    command: sh -c "npm ci && exec npx webpack --watch --output-path ../sakkyokuapp/static/sakkyokuapp/javascript"
+    volumes:
+      - "./scripts:/usr/src/app/scripts"
+      - "./sakkyokuapp/static/sakkyokuapp/javascript:/usr/src/app/sakkyokuapp/static/sakkyokuapp/javascript"
+
+  # 音源(WASM)のビルド。scripts/sf2js/FluidR3_GM.sf2 を置いてから docker compose run --rm wasm で実行する
+  wasm:
+    image: emscripten/emsdk:6.0.12
+    profiles: ["tools"]
+    <<: *host-user
+    working_dir: /src/scripts/sf2js
+    command: sh -c "make wasm && cp tfs.js tfs.wasm tfs.data ../../sakkyokuapp/static/sakkyokuapp/javascript/"
+    volumes:
+      - ".:/src"
+
 volumes:
   dbdata:

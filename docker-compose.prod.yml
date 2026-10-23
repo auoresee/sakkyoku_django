@@ -1,0 +1,48 @@
+# 本番用 (将来 Docker で運用する場合)。使い方は readme.md の「本番 (Docker)」を参照
+name: sakkyoku
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      - MARIADB_USER=noverdi
+      - MARIADB_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD in .env}
+      - MARIADB_DATABASE=noverdi
+    # DB のポートは公開しない (web からはコンテナ間のネットワークで接続する)
+    volumes:
+      - "dbdata:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      target: prod
+    restart: unless-stopped
+    environment:
+      - DEPLOY_ENV=production
+      - SAKKYOKU_VIEW_BASE_DIR=/usr/src/app
+      - SAKKYOKU_DB_HOST=db
+      - SAKKYOKU_ALLOWED_HOSTS=${SAKKYOKU_ALLOWED_HOSTS:?Set SAKKYOKU_ALLOWED_HOSTS in .env}
+      - SAKKYOKU_SQL_PASSWORD=${SAKKYOKU_DB_PASSWORD:?Set SAKKYOKU_DB_PASSWORD in .env}
+      - SAKKYOKU_SECRET_KEY=${SAKKYOKU_SECRET_KEY:?Set SAKKYOKU_SECRET_KEY in .env}
+      - SAKKYOKU_HTTPS=proxy
+      - SAKKYOKU_SECURE_HSTS_SECONDS=${SAKKYOKU_SECURE_HSTS_SECONDS:-3600}
+    ports:
+      - "127.0.0.1:5200:8000"
+    volumes:
+      # 曲ファイルはコンテナを作り直しても消えないようボリュームに置く (DB のボリュームと一緒にバックアップする)
+      - "songs:/usr/src/app/sakkyokuapp/songs"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dbdata:
+  songs:

@@ -191,7 +191,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = '/static/'      # SoundManager.ts がこのパスを直接使っている
+
+# collectstatic で静的ファイルを集める場所。本番では whitenoise (Docker) か Apache の Alias でここを配信する
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
