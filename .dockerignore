@@ -1,3 +1,28 @@
 **/__pycache__
 **/node_modules
 .env
+
+# 秘密情報と本番用の設定 (Docker では環境変数で渡す)
+sakkyoku/secretkey.py
+sakkyoku/mysqlpassword.py
+sakkyoku/_env_prod.py
+
+# 履歴、作業用・ローカル環境のファイル
+.git
+local/
+*.lnk
+*.url
+db.sqlite3
+
+# 利用者のデータ (本番ではボリュームに置く)
+sakkyokuapp/songs/*.song
+
+# イメージの中でビルド・収集するもの
+scripts/dist
+scripts/sf2js/tfs.*
+scripts/sf2js/*.o
+sakkyokuapp/static/sakkyokuapp/javascript/*.js
+sakkyokuapp/static/sakkyokuapp/javascript/*.js.*
+sakkyokuapp/static/sakkyokuapp/javascript/*.data
+sakkyokuapp/static/sakkyokuapp/javascript/*.wasm
+staticfiles
