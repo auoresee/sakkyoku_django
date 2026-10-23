@@ -10,13 +10,22 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
+import importlib
 import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
 from . import _env
-from . import _env_prod
+
+# 本番の設定ファイル。本番でも、環境変数で設定する場合(Docker など)は無くてもよい
+_env_prod = None
+if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
+    try:
+        _env_prod = importlib.import_module('sakkyoku._env_prod')
+    except ModuleNotFoundError as e:
+        if e.name != 'sakkyoku._env_prod':
+            raise
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,9 +50,15 @@ DEBUG = _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.DEVELOPMENT
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
+# 本番の公開ホスト名は SAKKYOKU_ALLOWED_HOSTS (カンマ区切り)、未設定なら _env_prod.py のドメイン名とIPアドレス
 if _env.DEPLOYMENT_ENVIRONMENT == _env.DeploymentEnvironment.PRODUCTION:
-    ALLOWED_HOSTS.append(_env_prod.ENV_DOMAIN_NAME)
-    ALLOWED_HOSTS.append(_env_prod.ENV_DEPLOY_IP)
+    if os.environ.get('SAKKYOKU_ALLOWED_HOSTS', '').strip():
+        ALLOWED_HOSTS += [host.strip() for host in os.environ['SAKKYOKU_ALLOWED_HOSTS'].split(',') if host.strip()]
+    elif _env_prod is not None:
+        ALLOWED_HOSTS.append(_env_prod.ENV_DOMAIN_NAME)
+        ALLOWED_HOSTS.append(_env_prod.ENV_DEPLOY_IP)
+    else:
+        raise ImproperlyConfigured('Set SAKKYOKU_ALLOWED_HOSTS or create sakkyoku/_env_prod.py')
 
 # 本番のHTTPSの受け方を SAKKYOKU_HTTPS (未設定なら _env_prod.py の ENV_HTTPS) で指定する
 #   proxy:  前段のリバースプロキシでTLSを終端し、プロキシが X-Forwarded-Proto を設定(上書き)する
