@@ -200,5 +200,11 @@ onmessage = (ev) => {
         case 'note-off':
             noteOff(data.chan, data.key);
             break;
+        case 'program-change':
+            programChange(data.chan, data.pc, data.isDrum);
+            break;
+        case 'set-channel-volume':
+            setChannelVolume(data.chan, data.volume / 127.0);
+            break;
     }
 }

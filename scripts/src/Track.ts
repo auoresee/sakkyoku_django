@@ -177,6 +177,10 @@ export class TrackCoordinator {
         chan: number,
         pc: number,
         isDrum: boolean
+    } | {
+        type: 'set-channel-volume',
+        chan: number,
+        volume: number
     }) {
         switch (info.type) {
             case 'note': {
@@ -210,7 +214,19 @@ export class TrackCoordinator {
                         pc: info.pc,
                         isDrum: info.isDrum
                     }
-                })
+                });
+                break;
+            }
+            case 'set-channel-volume': {
+                this.sf2Sched.scheduleNow({
+                    type: 'channel',
+                    chan: info.chan,
+                    entry: {
+                        type: 'set-channel-volume',
+                        volume: info.volume
+                    }
+                });
+                break;
             }
         }
     }
@@ -566,15 +582,20 @@ export class Track {
     }
 
     playNoteWithSf2(noteNumber: number, beat: number, duration: number, volume: number, midiNoteNumber: number) {
-        if (this.programChanged) {
-            const [pc, isDrum] = this.getPcAndIsDrum();
-            this.trackCoord.scheduleNowSf2({
-                type: 'program-change',
-                chan: this.trackNumber,
-                pc: pc,
-                isDrum: isDrum
-            });
-        }
+        //楽器と音量を設定していないチャンネルでは SF2 は発音しないため、再生前でも鳴るように毎回送る
+        //(再生時と同じく、楽器の変更もすぐ反映される)
+        const [pc, isDrum] = this.getPcAndIsDrum();
+        this.trackCoord.scheduleNowSf2({
+            type: 'program-change',
+            chan: this.trackNumber,
+            pc: pc,
+            isDrum: isDrum
+        });
+        this.trackCoord.scheduleNowSf2({
+            type: 'set-channel-volume',
+            chan: this.trackNumber,
+            volume: this.volume
+        });
         this.trackCoord.scheduleNowSf2({
             type: 'note',
             chan: this.trackNumber,

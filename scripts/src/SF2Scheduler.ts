@@ -176,8 +176,23 @@ export class SF2Player {
                     key: info.entry.key
                 });
                 break;
+            case 'program-change':
+                this.worker!.postMessage({
+                    type: 'program-change',
+                    chan: info.chan,
+                    pc: info.entry.pc,
+                    isDrum: info.entry.isDrum
+                });
+                break;
+            case 'set-channel-volume':
+                this.worker!.postMessage({
+                    type: 'set-channel-volume',
+                    chan: info.chan,
+                    volume: info.entry.volume
+                });
+                break;
             default:
-                console.warn('SF2Player output: unsupported entry: ' + info.entry.type)
+                console.warn('SF2Player output: unsupported entry: ' + (info.entry as Entry).type)
         }
     }
 
