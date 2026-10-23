@@ -12,7 +12,7 @@ let SampleRate;
 
 function loadSf2() {
     load_sf2 = Module.cwrap('load_sf2', 'number', ['string']);
-    sf2 = load_sf2("FluidR3_GM.sf2");
+    sf2 = load_sf2("soundfont.sf2");
 
     init_output = Module.cwrap('init_output', null, ['number']);
     init_output(sf2, SampleRate);

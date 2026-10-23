@@ -5,6 +5,7 @@
 /build/
 /*.mid
 /*.sf2
+/*.SF2
 /tfs.data
 /tfs.js
 /tfs.wasm

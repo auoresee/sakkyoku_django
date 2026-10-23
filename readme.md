@@ -4,8 +4,10 @@ docker-compose.yml は開発用。Django の開発サーバー、TypeScript の�
 
 1. .env.example を .env にコピーし、DBのパスワード2つと秘密鍵を設定する (.env はコミットしない)。
    Linux では SAKKYOKU_UID / SAKKYOKU_GID にホストの利用者の `id -u` / `id -g` の値も設定する
-2. 音源 FluidR3_GM.sf2 を別途入手して scripts/sf2js/ に置き、音源(WASM)をビルドする。
-   初回と、scripts/sf2js/bridge.c や音源を変えたときだけでよい
+2. 音源(SoundFont)を別途入手して scripts/sf2js/ に置き、音源(WASM)をビルドする。
+   初回と、scripts/sf2js/bridge.c や音源を変えたときだけでよい。
+   既定のファイル名は FluidR3_GM.sf2。別の音源を使う場合は .env の SAKKYOKU_SF2 にファイル名を設定する
+   (General MIDI 配置の音源であること。楽器は instruments.ts の programChange の番号で選ばれる)
    ```bash
    docker compose run --rm wasm
    ```
@@ -31,7 +33,8 @@ docker-compose.yml は開発用。Django の開発サーバー、TypeScript の�
 # 本番 (Docker、将来用)
 docker-compose.prod.yml は本番用 (gunicorn、DEPLOY_ENV=production)。
 1. .env に、上記に加えて SAKKYOKU_ALLOWED_HOSTS (公開するホスト名) を設定する
-2. FluidR3_GM.sf2 を scripts/sf2js/ に置いてからビルド・起動する (TypeScript と音源はイメージの中でビルドする)
+2. 音源を scripts/sf2js/ に置いてからビルド・起動する (TypeScript と音源はイメージの中でビルドする)。
+   FluidR3_GM.sf2 以外の音源は .env の SAKKYOKU_SF2 で指定する
    ```bash
    docker compose -f docker-compose.prod.yml up -d --build
    ```
@@ -95,6 +98,7 @@ cd scripts
 npm install --also=dev
 ./build_dev.sh
 ```
+   音源は scripts/sf2js/FluidR3_GM.sf2 を使う。別の音源は環境変数 SF2 で指定する (例: SF2=xxx.sf2 ./build_dev.sh)
 
 9. 環境変数 DEPLOY_ENV を設定してサーバーを起動する (開発時は dev。未設定ではエラーになる)
     DEPLOY_ENV=dev python3 manage.py runserver

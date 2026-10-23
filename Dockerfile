@@ -1,5 +1,6 @@
 # 開発用 (docker-compose.yml) は dev、本番用 (docker-compose.prod.yml) は prod のステージを使う
-# 本番用は scripts/sf2js/FluidR3_GM.sf2 を別途置いてからビルドする
+# 本番用は音源(SoundFont)を scripts/sf2js/ に別途置いてからビルドする。
+# ファイル名は SF2 で指定する (既定は FluidR3_GM.sf2。docker-compose.prod.yml は .env の SAKKYOKU_SF2 を渡す)
 
 FROM node:24-alpine AS js
 WORKDIR /home/node/app
@@ -12,9 +13,10 @@ RUN npm run build
 
 
 FROM emscripten/emsdk:6.0.12 AS em
+ARG SF2=FluidR3_GM.sf2
 WORKDIR /usr/src/app
 COPY scripts/sf2js ./
-RUN make wasm && mkdir build && cp tfs.data tfs.js tfs.wasm build/
+RUN make -B wasm SF2="$SF2" && mkdir build && cp tfs.data tfs.js tfs.wasm build/
 
 
 FROM python:3.13-alpine AS base

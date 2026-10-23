@@ -24,6 +24,8 @@ services:
     build:
       context: .
       target: prod
+      args:
+        - SF2=${SAKKYOKU_SF2:-FluidR3_GM.sf2}
     restart: unless-stopped
     environment:
       - DEPLOY_ENV=production

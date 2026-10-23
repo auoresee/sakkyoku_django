@@ -20,7 +20,7 @@ let Module;
 
 function loadSf2() {
     load_sf2 = Module.cwrap('load_sf2', 'number', ['string']);
-    sf2 = load_sf2("FluidR3_GM.sf2");
+    sf2 = load_sf2("soundfont.sf2");     //埋め込む音源は scripts/sf2js/Makefile の SF2 で指定する
 }
 
 //initialize audio output with given sample rate
